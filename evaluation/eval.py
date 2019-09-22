@@ -445,7 +445,7 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
                 predPairTypedConnectedWeightList = None
 
             if debug:
-                print "TNFs read"
+                print ("TNFs read")
         else:
             gholders = None
 
@@ -651,8 +651,8 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
     X_train_typed = get_typed_feats(data_train,predPairFeatsTyped)
 
     if not args.useSims:
-        X_train = [x[0:len(X_train[0])/2] for x in X_train]#only the first half!
-        X_train_typed = [x[0:len(X_train_typed[0])/2] for x in X_train_typed]#only the first half!
+        X_train = [x[0:len(X_train[0])//2] for x in X_train]#only the first half!
+        X_train_typed = [x[0:len(X_train_typed[0])//2] for x in X_train_typed]#only the first half!
 
     if debug:
         print ("here shape: ", np.array(X_train).shape)
@@ -669,8 +669,8 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
     X_dev_typed = get_typed_feats(data_dev,predPairFeatsTyped)
 
     if not args.useSims:
-        X_dev = [x[0:len(X_dev[0])/2] for x in X_dev]#only the first half!
-        X_dev_typed = [x[0:len(X_dev_typed[0])/2] for x in X_dev_typed]#only the first half!
+        X_dev = [x[0:len(X_dev[0])//2] for x in X_dev]#only the first half!
+        X_dev_typed = [x[0:len(X_dev_typed[0])//2] for x in X_dev_typed]#only the first half!
 
     if not args.supervised:
         if args.oneFeat:
@@ -681,7 +681,7 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                 else:
                     f_idx = graph.Graph.num_feats + graph.Graph.featIdx
                 if args.rankFeats:
-                    f_idx += graph.Graph.num_feats/2
+                    f_idx += graph.Graph.num_feats//2
             else:
                 if args.useSims:
                     f_idx = 2
@@ -692,12 +692,12 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                 if not args.rankDiscount:
                     Y_dev_pred = [x[f_idx] for x in X_dev]
                 else:
-                    Y_dev_pred = [x[f_idx]*x[f_idx+graph.Graph.num_feats/2] ** .5 for x in X_dev]
+                    Y_dev_pred = [x[f_idx]*x[f_idx+graph.Graph.num_feats//2] ** .5 for x in X_dev]
             else:
                 if not args.rankDiscount:
                     Y_dev_pred = [x[f_idx] for x in X_dev_typed]
                 else:
-                    Y_dev_pred = [x[f_idx] * x[f_idx + graph.Graph.num_feats / 2] ** .5 for x in X_dev_typed]
+                    Y_dev_pred = [x[f_idx] * x[f_idx + graph.Graph.num_feats // 2] ** .5 for x in X_dev_typed]
 
                 if args.backupAvg:
                     if not args.rankDiscount:
@@ -1046,8 +1046,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         print (b)
 
     if debug:
-        print "auc: ", auc
-        print "auc: ", auc
+        print ("auc: ", auc)
 
     prs_high = []
     recs_high = []
@@ -1059,7 +1058,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
     for i in range(len(precision)):
 
         if args.write:
-            if i>0 and i<range(len(precision)):
+            if i>0:
                 op_pr_rec.write(str(precision[i])+ " "+ str(recall[i])+"\n")
                 if precision[i] > .5 and precision[i]!=1:
                     prs_high.append(precision[i])
@@ -1161,8 +1160,8 @@ def write_detailed_res(data,lines,Y,Y_pred, Y_berant, base_threshold = .75):
                 threshold = thresholds[j]
             except:
                 pass
-        print str(precision[j]) + " " + str(recall[j])
-    print "threshold is: ", str(threshold)
+        print (str(precision[j]) + " " + str(recall[j]))
+    print ("threshold is: ", str(threshold))
 
     Y_pred_binary = [y > threshold for y in Y_pred]
 
@@ -1180,18 +1179,18 @@ def write_detailed_res_binary(data,lines,Y,Y_pred,Y_pred_binary, Y_berant):
         else:
             conf_l = "TN"
 
-        print conf_l, ":", lines[idx]
-        print "pred: ", Y_pred[idx]
-        print p + "#" + q + "#" + str(a)
-        print str(t1s) + "#" + str(t2s) + "\n"
+        print (conf_l, ":", lines[idx])
+        print ("pred: ", Y_pred[idx])
+        print (p + "#" + q + "#" + str(a))
+        print (str(t1s) + "#" + str(t2s) + "\n")
 
-    print "ours vs Berant's"
+    print ("ours vs Berant's")
     for (idx, _) in enumerate(data):
         if Y_pred_binary[idx] != Y_berant[idx]:
             if Y_pred_binary[idx] == Y[idx]:
-                print "ours is correct: ", lines[idx]
+                print ("ours is correct: ", lines[idx])
             else:
-                print "Berant's is correct: ", lines[idx]
+                print ("Berant's is correct: ", lines[idx])
 
 def calcGraphScores(gr, cl, scaler):
 

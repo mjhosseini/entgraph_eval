@@ -3,7 +3,7 @@ import numpy as np
 from nltk.corpus import wordnet as wn
 debug = False
 
-from qa_utils import get_lemmas_only_verbs, get_lemmas_no_stopwords, get_lemmas, get_tuples
+from .qa_utils import get_lemmas_only_verbs, get_lemmas_no_stopwords, get_lemmas, get_tuples
 
 class Baseline:
 

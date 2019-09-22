@@ -1,7 +1,7 @@
 # Written by Omer Levy, modified by Javad Hosseini
 from collections import defaultdict
 
-from qa_utils import aligned_args, get_lemmas, get_tuples
+from .qa_utils import aligned_args, get_lemmas, get_tuples
 
 debug = False
 
