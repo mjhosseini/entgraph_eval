@@ -1,4 +1,5 @@
 from sccGraph import *
+debug = False
 
 class GHolder:
     def __init__(self,pgragh, lmbda,gLines=None,lIdx=-1,types=None):
@@ -19,8 +20,8 @@ class GHolder:
 
         N = len(tnf.node2sccIdx)
         self.node2comp = {}
-
-        print "N: ", N
+        if debug:
+            print ("N: ", N)
 
         for i in range(N):
             self.node2comp[i] = 0#

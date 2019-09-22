@@ -1,10 +1,9 @@
-import numpy as np
 import sys
+import numpy as np
 sys.path.append("..")
 from graph import graph
-
 from lemma_baseline import qa_utils, berant
-import util
+import evaluation.util
 from lemma_baseline import baseline
 from copy import deepcopy
 from sklearn.linear_model import LogisticRegression
@@ -13,14 +12,18 @@ import os
 from sklearn import svm
 from sklearn.metrics import precision_recall_curve
 from sklearn import metrics
-from data.flags import opts
+from constants.flags import opts
 from ppdb import predict
 
-np.set_printoptions(threshold='nan')
+np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(linewidth=np.nan)
 
-grPostfix = "_binc_lm1_.001_reg_1.5_1_.2_.01_i20_HTLFRG_confAvg_nodisc.txt"
+#this is the default postfix, but can be overwritten by --sim_suffix
 f_post_fix = "_sim.txt"
+
+#only used for binary graphs (not used by default)
+grPostfix = "_binc_lm1_.001_reg_1.5_1_.2_.01_i20_HTLFRG_confAvg_nodisc.txt"
+
 
 def get_sum_simlar_feats(gr,p1s,q1s):
     feats = np.zeros(graph.Graph.num_feats)
@@ -29,7 +32,8 @@ def get_sum_simlar_feats(gr,p1s,q1s):
         for q1 in q1s:
             this_feats = gr.get_features(p1,q1)
             if this_feats is not None:
-                print "not None in get_sims: ", p1,q1, this_feats
+                if debug:
+                    print ("not None in get_sims: ", p1,q1, this_feats)
                 feats += this_feats
                 num_found += 1
     if not num_found:
@@ -48,7 +52,8 @@ def equalType(p1,t1,t2):
     p1ss = p1t.split("#")
     ret = t1 == p1ss[1] and t2 == p1ss[2]
     if ret==False:
-        print "equalType false: ", p1,t1,t2
+        if debug:
+            print ("equalType false: ", p1,t1,t2)
     return ret
 
 #p and q are the original ones. p1 and q1 are typed predicates
@@ -56,59 +61,66 @@ def equalType(p1,t1,t2):
 def add_feats_for_predPair(gr,p,q,a,t1,t2,p1,q1, p1s, q1s, predPairCounts, predPairSumCoefs, predPairSimSumCoefs, predPairFeats,predPairTypedExactFound,is_typed):
 
     feats = gr.get_features(p1,q1)
-    # print "p1, q1: ", p1, q1
-    # print "feats: ", feats
     feats_sim = get_sum_simlar_feats(gr,p1s,q1s)
-
 
     #This is for numNodes: num p, num q, num nodes
 
     if feats is not None or feats_sim is not None:
         no_exact_feats = False
-        print "feats:", feats
-        print "feats_sim:", feats_sim
+        if debug:
+            print ("feats:", feats)
+            print ("feats_sim:", feats_sim)
         if feats is None:
             no_exact_feats = True
             feats = np.zeros(graph.Graph.num_feats)
 
         if is_typed:
             predPair = p+"#"+q+"#"+str(a)+"#"+t1+"#"+t2
-            print "featsT: ", feats
+            if debug:
+                print ("featsT: ", feats)
         else:
             predPair = p+"#"+q+"#"+str(a)
-        print "predPair:", predPair
-        print "p1,q1: ", p1, q1
+        if debug:
+            print ("predPair:", predPair)
+            print ("p1,q1: ", p1, q1)
         if np.count_nonzero(feats)!=0 and not is_typed:
-            print "adding predPair to counts"
-            util.addPred(predPair,predPairCounts)
+            if debug:
+                print ("adding predPair to counts")
+            evaluation.util.addPred(predPair, predPairCounts)
         if predPair not in predPairFeats:
             predPairFeats[predPair] = (np.zeros(num_feats))
             #For similarity ones:
             if not is_typed:
-                print "setting predpairsums to zero"
+                if debug:
+                    print ("setting predpairsums to zero")
                 predPairSumCoefs[predPair] = 0
                 predPairSimSumCoefs[predPair] = 0
 
         coef1,coef2 = 1, 1
 
         if is_typed and equalType(p1,t1,t2) and not no_exact_feats:
-            print "adding to predPairTyped: ", predPair
+            if debug:
+                print ("adding to predPairTyped: ", predPair)
             predPairTypedExactFound.add(predPair)
 
-        print "coef: ", coef1, " ", coef2
+        if debug:
+            print ("coef: ", coef1, " ", coef2)
         if is_typed:
             predPairFeats[predPair][0:graph.Graph.num_feats] = feats
             predPairFeats[predPair][graph.Graph.num_feats:2*graph.Graph.num_feats] = feats_sim
 
         else:
-            print "setting predPairFeats"
+            if debug:
+                print ("setting predPairFeats")
             predPairFeats[predPair][0:graph.Graph.num_feats] += coef1 * feats
             predPairFeats[predPair][graph.Graph.num_feats:2*graph.Graph.num_feats] += coef2 * feats_sim
             if not no_exact_feats:
-                print "setting sumCoefs:"
+                if debug:
+                    print ("setting sumCoefs:")
                 predPairSumCoefs[predPair] += coef1
             else:
-                print "adding coef only for sims: ", coef2
+                if debug:
+                    print ("adding coef only for sims: ", coef2)
             predPairSimSumCoefs[predPair] += coef2
     return feats is not None and feats[0]!=0 and not no_exact_feats
 
@@ -125,16 +137,18 @@ def add_connectivity_for_predPair(gr,p,q,p1,q1,a,t1,t2,gholders,is_typed,predPai
         coef = 1
 
         if is_typed and equalType(p1, t1, t2):
-            print "adding to predPairTyped: ", predPair
+            if debug:
+                print ("adding to predPairTyped: ", predPair)
             predPairTypedExactFound.add(predPair)
 
     for (idx,gholder) in enumerate(gholders):
 
         if is_connected_in_GHolder(gr,p1,q1,gholder):
 
-            print "typed based predpair:", predPair
-            print "p1, q1:", p1, q1
-            print "gr based coef: ", coef
+            if debug:
+                print ("typed based predpair:", predPair)
+                print ("p1, q1:", p1, q1)
+                print ("gr based coef: ", coef)
             predPairConnectedList[idx][predPair] = 1
 
 
@@ -192,18 +206,20 @@ def form_samples_gr(gr, data, data_unary, predCounts, predPairCounts, predPairSu
 
         else:
             if p1 in gr.pred2Node or p2 in gr.pred2Node:
-                util.addPred(p,predCounts)
+                evaluation.util.addPred(p, predCounts)
 
             if q1 in gr.pred2Node or q2 in gr.pred2Node:
-                util.addPred(q,predCounts)
+                evaluation.util.addPred(q, predCounts)
             #gr,p,q,a,t1,t2,p1,q1, p1s, q1s, predPairCounts, predPairSumCoefs, predPairSimSumCoefs, predPairFeats,is_typed
             added = add_feats_for_predPair(gr,p,q,a,None,None,p1,q1,p1s,q1s,predPairCounts, predPairSumCoefs,predPairSimSumCoefs, predPairFeats,None,False)
             if added:
-                print "added: ", p1, " ", q1," ", a, " ", types
+                if debug:
+                    print ("added: ", p1, " ", q1," ", a, " ", types)
 
             added2 = add_feats_for_predPair(gr,p,q,a,None,None,p2,q2,p2s,q2s,predPairCounts, predPairSumCoefs,predPairSimSumCoefs, predPairFeats,None,False)
             if added2:
-                print "added2: ", p2, " ", q2," ", a, " ", types
+                if debug:
+                    print ("added2: ", p2, " ", q2," ", a, " ", types)
 
         #Now, the typed ones!
         type_pair = None #This is to find the order of types (if any) that matches the graph!
@@ -222,7 +238,8 @@ def form_samples_gr(gr, data, data_unary, predCounts, predPairCounts, predPairSu
 
 
         if type_pair is not None:
-            print "a type match: ",type_pair, (p,q,t1,t2,a)
+            if debug:
+                print ("a type match: ",type_pair, (p,q,t1,t2,a))
 
             this_types = type_pair.split("#")
             p1 = p + "#" + this_types[0] + "#" + this_types[1]
@@ -239,7 +256,8 @@ def form_samples_gr(gr, data, data_unary, predCounts, predPairCounts, predPairSu
             else:
                 added = add_feats_for_predPair(gr,p,q,a,t1,t2,p1,q1,p1s,q1s,predPairCounts,None, None, predPairFeatsTyped,predPairTypedExactFound,True)
                 if added:
-                    print "added typed: ", p1, " ", q1," ", a, " ", types
+                    if debug:
+                        print ("added typed: ", p1, " ", q1," ", a, " ", types)
     if not gholders:
         ts = types  # This is to find the order of types (if any) that matches the graph!
         ts[0] = ts[0].replace("_1","").replace("_2","")
@@ -250,7 +268,6 @@ def form_samples_gr(gr, data, data_unary, predCounts, predPairCounts, predPairSu
             v1 = v + "#" + t
 
             if t==ts[0] or t==ts[1]:
-                # print "unary type match: ", t, (u,v,t), "graph types: ", ts
                 added = add_feats_for_unaryPair(gr, u, v, u1,v1, t, unaryPairFeatsTyped, unaryPairTypedSumCoefs)
                 # if added:
                 #     print "added unary typed: ", u, v, t
@@ -292,10 +309,10 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
     global num_feats
     num_feats = -1
 
-    data_list = [util.read_data(fnames[i],orig_fnames[i],args.CCG,args.typed,args.LDA) for i in range(len(fnames))]
+    data_list = [evaluation.util.read_data(fnames[i], orig_fnames[i], args.CCG, args.typed, args.LDA) for i in range(len(fnames))]
     data_list_unary = []
     if fnames_unary:
-        data_list_unary = [util.read_data_unary(fnames_unary[i],args.typed) for i in range(len(fnames_unary))]
+        data_list_unary = [evaluation.util.read_data_unary(fnames_unary[i], args.typed) for i in range(len(fnames_unary))]
 
     predc_ds = []
     predPairc_DS = []
@@ -303,7 +320,7 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
     predPairc_Pos_DS = []
 
     for data in data_list:
-        (predCDS_, predPairsCDS_, predPairsTypedCDS_, predPairsC_Pos_DS_) = util.getPredPairs(data)
+        (predCDS_, predPairsCDS_, predPairsTypedCDS_, predPairsC_Pos_DS_) = evaluation.util.getPredPairs(data)
         predc_ds.append(predCDS_)
         predPairc_DS.append(predPairsCDS_)
         predPaircTyped_DS.append(predPairsTypedCDS_)
@@ -312,8 +329,8 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
     predPairTypedExactFound = set()
 
     if fname_feats is not None:
-        predPairFeats, predPairFeatsTyped, predPairSumCoefs,predPairTypedExactFound = util.read_predPairFeats(fname_feats,data_list)
-        num_feats = util.num_feats
+        predPairFeats, predPairFeatsTyped, predPairSumCoefs,predPairTypedExactFound = evaluation.util.read_predPairFeats(fname_feats, data_list)
+        num_feats = evaluation.util.num_feats
         return data_list, predPairSumCoefs, predPairFeats,predPairFeatsTyped, None, None, None, None, predPairTypedExactFound
 
     data_agg = []
@@ -330,7 +347,8 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
         data_agg_unary.extend(data_unary)
     data_agg_unary = set(data_agg_unary)
 
-    print "num unaryPairs: ", len(data_agg_unary)
+    if debug:
+        print ("num unaryPairs: ", len(data_agg_unary))
 
     #The following to be filled based on the graphs!
     predCounts = {}
@@ -351,25 +369,24 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
     predPairTypedConnectedList = None
     predPairTypedConnectedWeightList = None
 
-
-    #print "data loaded"
-
     files = os.listdir(engG_dir_addr)
     files = list(np.sort(files))
     num_f = 0
 
     for f in files:
-        # if num_f == 10:#TODO: be careful
+        # if num_f == 100:#Use this for debugging!
         #     break
-        if num_f % 50 == 0:
-            print "num files: ", num_f
 
         gpath=engG_dir_addr+f
 
         if f_post_fix not in f or os.stat(gpath).st_size == 0:
             continue
-        print "fname: ", f
+        if debug:
+            print ("fname: ", f)
         num_f += 1
+
+        if num_f % 50 == 0:
+            print ("num processed files: ", num_f)
 
         graphFilePath = gpath[:-8]+grPostfix
 
@@ -383,21 +400,25 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
 
 
         if read_sims:
-            print "gr size: ", sys.getsizeof(gr), "num edge: ", gr.num_edges
+            if debug:
+                print ("gr size: ", sys.getsizeof(gr), "num edge: ", gr.num_edges)
 
-        print "reading TNFs: "
+        if debug:
+            print ("reading TNFs: ")
         lIdx = 0
         if args.tnf:
             try:
                 gLines = open(graphFilePath).readlines()
             except:
-                print "exception to open: ", graphFilePath
+                if debug:
+                    print ("exception to open: ", graphFilePath)
                 continue
 
             gLines = [l.rstrip() for l in gLines]
 
             types = f[:-8].split("#")
-            print "types: ", types
+            if debug:
+                print ("types: ", types)
             if types[0] == types[1]:
                 types[0] += "_1"
                 types[1] += "_2"
@@ -405,7 +426,8 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
             gholders = []
             lmbdaIdx = 0
             while lIdx<len(gLines):
-                print "lmbdaIdx: ", lmbdaIdx
+                if debug:
+                    print ("lmbdaIdx: ", lmbdaIdx)
                 gholder = graph_holder.GHolder(gr,-1,gLines,lIdx,types)
                 lIdx = gholder.lIdx
                 gholder.clean()#Removes the pgraphs of its TNFs
@@ -422,7 +444,8 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
 
                 predPairTypedConnectedWeightList = None
 
-            print "TNFs read"
+            if debug:
+                print "TNFs read"
         else:
             gholders = None
 
@@ -435,31 +458,37 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
 
     for (idx,fname) in enumerate(fnames):
 
-        print "stats for: " + fname
+        if debug:
+            print ("stats for: " + fname)
 
-        print "num all preds: ", len(predc_ds[idx])
-        print "num all predPairs: ", len(predPairc_DS[idx])
-        print "num all pos predPairs: ", len(predPairc_Pos_DS[idx])
+            print ("num all preds: ", len(predc_ds[idx]))
+            print ("num all predPairs: ", len(predPairc_DS[idx]))
+            print ("num all pos predPairs: ", len(predPairc_Pos_DS[idx]))
 
 
-        print "num preds covered: ", np.count_nonzero( [(pred in predCounts) for pred in predc_ds[idx]] )
-        print "num all predPairs covered: ", np.count_nonzero( [(predpair in predPairCounts) for predpair in predPairc_DS[idx]] )
-        print "num pos predPairs covered: ", np.count_nonzero( [(predpair in predPairCounts) for predpair in predPairc_Pos_DS[idx]] )
-        print "predCounts: "
+            print ("num preds covered: ", np.count_nonzero( [(pred in predCounts) for pred in predc_ds[idx]] ))
+            print ("num all predPairs covered: ", np.count_nonzero( [(predpair in predPairCounts) for predpair in predPairc_DS[idx]] ))
+            print ("num pos predPairs covered: ", np.count_nonzero( [(predpair in predPairCounts) for predpair in predPairc_Pos_DS[idx]] ))
+            print ("predCounts: ")
 
         for p in predc_ds[idx]:
             if p in predCounts:
-                print p + "\t" + str(predCounts[p]) + "\t" + str(predc_ds[idx][p])
+                if debug:
+                    print (p + "\t" + str(predCounts[p]) + "\t" + str(predc_ds[idx][p]))
             else:
-                print p + "\t" + "0"  + "\t" + str(predc_ds[idx][p])
+                if debug:
+                    print (p + "\t" + "0"  + "\t" + str(predc_ds[idx][p]))
 
-        print "predPairCounts_Pos: "
+        if debug:
+            print ("predPairCounts_Pos: ")
 
         for r in predPairc_Pos_DS[idx]:
             if r in predPairCounts:
-                print r + "\t" + str(predPairCounts[r]) + "\t" + str(predPairc_DS[idx][r])
+                if debug:
+                    print (r + "\t" + str(predPairCounts[r]) + "\t" + str(predPairc_DS[idx][r]))
             else:
-                print r + "\t" + "0"+ "\t" + str(predPairc_DS[idx][r])
+                if debug:
+                    print (r + "\t" + "0"+ "\t" + str(predPairc_DS[idx][r]))
 
     if read_sims:
 
@@ -492,7 +521,8 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
                 if predPairSimSumCoefs[r] != 0:
                     predPairFeats[r][graph.Graph.num_feats:2 * graph.Graph.num_feats] /= predPairSimSumCoefs[r]
 
-        print "predPairFeats: "
+        if debug:
+            print ("predPairFeats: ")
 
         if not os.path.isdir('feats'):
             os.mkdir('feats')
@@ -502,32 +532,38 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
         for r in predpair_set:
             if r in predPairSumCoefs:
                 line = r + "\t" + str(predPairSumCoefs[r]) + "\t" + str(predPairSimSumCoefs[r]) + "\t" + str(predPairFeats[r])
-                print line
+                if debug:
+                    print (line)
                 f_feats.write(line+'\n')
             else:
                 predPairFeats[r] = deepcopy(np.zeros(num_feats))
                 line = r + "\t" + "0\t0"+ "\t" + str(np.zeros(num_feats))
-                print line
+                if debug:
+                    print (line)
                 f_feats.write(line + '\n')
 
-        print "predPairFeatsTyped: "
+        if debug:
+            print ("predPairFeatsTyped: ")
 
         for r in predpairTyped_set:
             if r in predPairFeatsTyped:
                 line = r + "\t" + str(predPairFeatsTyped[r])
-                print line
+                if debug:
+                    print (line)
                 f_feats.write(line + '\n')
             else:
                 predPairFeatsTyped[r] = deepcopy(np.zeros(num_feats))
                 line = r + "\t" + str(np.zeros(num_feats))
-                print line
+                if debug:
+                    print (line)
                 f_feats.write(line + '\n')
 
         f_feats.write("predPairTypedExactFound:\n")
         for x in predPairTypedExactFound:
             f_feats.write(x + '\n')
 
-        print "predPairFeatsTyped: ", predPairTypedExactFound
+        if debug:
+            print ("predPairFeatsTyped: ", predPairTypedExactFound)
 
         # Writing unary features
 
@@ -535,10 +571,12 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
 
         for r in unaryPairFeatsTyped:
             line = r + "\t" + str(unaryPairTypedSumCoefs[r]) + "\t" + str(unaryPairFeatsTyped[r])
-            print line
+            if debug:
+                print (line)
             f_feats_unary.write(line + '\n')
 
-    print "predPairConnectedList in fit predict:", predPairConnectedList
+    if debug:
+        print ("predPairConnectedList in fit predict:", predPairConnectedList)
 
     return data_list, predPairSumCoefs, predPairFeats,predPairFeatsTyped,predPairConnectedList,predPairConnectedWeightList,predPairTypedConnectedList, predPairTypedConnectedWeightList, predPairTypedExactFound
 
@@ -553,15 +591,14 @@ def get_typed_feats(data,predPairFeatsTyped):
         X_typed.append(this_X)
     return X_typed
 
-
-#changes made to build the supervised graph: let the code do what it was doing before, but just return a classifier
-#to build the classifier for the entailment graph building, make sure to use: sup 1 exactFeats and rankFeats...
-def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedList,predPairConnectedWeightList,predPairTypedConnectedList,predPairTypedConnectedWeightList,predPairTypedExactFound,cos_feats_list,lines_train,args):
+#works in both unsupervised and supervised settings to return the entailment scores
+def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedList,predPairTypedConnectedList,predPairTypedExactFound,args):
 
     [data_train,data_dev] = data_list
 
     if predPairConnectedList is None:
-        print "predPairConnectedList is None"
+        if debug:
+            print ("predPairConnectedList is None")
         Y_dev_TNF = None
         Y_dev_TNF_typed = None
     else:
@@ -588,15 +625,19 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                         this_l = predPairTypedConnectedList[x][predPairTyped] * probs[t_i]
                         typed_l += this_l
 
-
-                print "testing, ", predPairTyped
+                if debug:
+                    print ("testing, ", predPairTyped)
                 # Not sure if we should not in predPairTypedExFound as for the thresholding way, we finally didn't.
                 if args.backupAvg and predPairTyped not in predPairTypedExactFound:
-                    print "not in exact"
+                    if debug:
+                        print ("not in exact")
                     if predPair in predPairConnectedList[x]:
-                        print "in connected, ", x
+                        if debug:
+                            print ("in connected, ", x)
                         typed_l = predPairConnectedList[x][predPair]
-                        print "now typed_l", typed_l
+
+                        if debug:
+                            print ("now typed_l", typed_l)
 
                 Y_dev_TNF_typed[x].append(typed_l)
 
@@ -613,7 +654,8 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
         X_train = [x[0:len(X_train[0])/2] for x in X_train]#only the first half!
         X_train_typed = [x[0:len(X_train_typed[0])/2] for x in X_train_typed]#only the first half!
 
-    print "here shape: ", np.array(X_train).shape
+    if debug:
+        print ("here shape: ", np.array(X_train).shape)
 
     if not args.calcSupScores:
         [X_train[i].extend(X_train_typed[i]) for i in range(len(X_train))]
@@ -621,10 +663,6 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
         X_train = X_train_typed
 
     #X: avg, avg_rank, avg_emb, avg_rank_emb, avg_typed, avg_rank_typed, avg_emb_typed, avg_rank_emb_typed
-
-    if cos_feats_list is not None:
-        [X_train[i].extend(cos_feats_list[0][i]) for i in range(len(X_train))]
-
 
     X_dev = [list(deepcopy(predPairFeats[p+"#"+q+"#"+str(a)])) for (p,q,_,_,_,a,l) in data_dev]
 
@@ -650,8 +688,6 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                 else:
                     f_idx = 0
 
-            # print "f_idx: ", f_idx
-
             if not args.exactType:
                 if not args.rankDiscount:
                     Y_dev_pred = [x[f_idx] for x in X_dev]
@@ -667,31 +703,22 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                     if not args.rankDiscount:
                         Y_dev_pred_backup = [x[f_idx] for x in X_dev]
                     else:
-                        # TODO: be careful, this is first average, then multiplied, but should be the other way around
+                        # this is first average, then multiplied, but should be the other way around
                         Y_dev_pred_backup = [x[f_idx] * x[f_idx + graph.Graph.num_feats / 2] ** .5 for x in X_dev]
                     Y_dev_pred2 = []
                     for i in range(len(Y_dev_pred)):
                         l = Y_dev_pred[i]
 
                         (p, q, t1s, t2s, probs, a, _) = data_dev[i]
-                        predPairTyped = p + "#" + q + "#" + str(a) + "#" + t1s[0] + "#" + t2s[0]
 
                         if l==0:#In practice, if it's zero, it's zero for everything!!! I tested this!
-                            # if predPairTyped not in predPairTypedExactFound:
-                            #     print "resort to average: ", predPairTyped
                             l = Y_dev_pred_backup[i]
-                            # else:
-                            #     print "l=0, but preds were in the ent graph: ", predPairTyped
                         Y_dev_pred2.append(l)
 
                     Y_dev_pred = Y_dev_pred2
 
-            # if args.rankFeats:
-            #     alpha = args.rankFeats
-            #     for i in range(len(Y_dev_pred)):
-            #         if Y_dev_pred[i]!=0:
-            #             Y_dev_pred[i] = Y_dev_pred[i]**alpha
-            print "nnz Y_dev_pred: ", np.count_nonzero(Y_dev_pred)
+            if debug:
+                print ("nnz Y_dev_pred: ", np.count_nonzero(Y_dev_pred))
 
         elif args.wAvgFeats:
 
@@ -706,8 +733,6 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                 ret = 0
                 for i,idx in enumerate(idxes):
                     ret += x[idx]*weights[i]
-                # if x[idxes[1]]==0:#TODO: be careful, remove this!
-                #     ret = x[idxes[0]]
                 return ret/sum_weighs
 
             Y_dev_pred = [weighted_sum(x,idxes,weights) for x in X_dev]
@@ -741,54 +766,61 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
         X_dev = X_dev_typed
     # X_dev = X_dev_typed
 
-    if cos_feats_list is not None:
-        [X_dev[i].extend(cos_feats_list[1][i]) for i in range(len(X_dev))]
-
-
     Y_train = [l for (_,_,_,_,_,_,l) in data_train]
     Y_dev = [l for (_,_,_,_,_,_,l) in data_dev]
 
-    print "computing train pair recall: "
-    pair_recall = util.compute_pair_recalls(X_train,Y_train)
-    print "pair recall: ", pair_recall
+    if debug:
+        print ("computing train pair recall: ")
+    pair_recall = evaluation.util.compute_pair_recalls(X_train, Y_train)
 
-    print "computing dev pair recall: "
-    pair_recall = util.compute_pair_recalls(X_dev,Y_dev)
-    print "pair recall: ", pair_recall
+    if debug:
+        print ("pair recall: ", pair_recall)
+        print ("computing dev pair recall: ")
+    pair_recall = evaluation.util.compute_pair_recalls(X_dev, Y_dev)
+    if debug:
+        print ("pair recall: ", pair_recall)
 
     X_train = np.array(X_train)
     X_dev = np.array(X_dev)
 
     Y_train = np.array(Y_train)
 
-
-    print "final shape: ", X_train.shape, X_dev.shape
+    if debug:
+        print ("final shape: ", X_train.shape, X_dev.shape)
 
     scaler = preprocessing.StandardScaler().fit(X_train)
 
     X_train = scaler.transform(X_train)
     X_dev = scaler.transform(X_dev)
 
-    # cl = svm.SVC(C=1.0,kernel='rbf',probability=True)
+    # changes made to build the supervised graph: let the code do what it was doing before, but just return a classifier
+    # to build the classifier for the entailment graph building, make sure to use: sup 1 exactFeats and rankFeats...
     cl = svm.SVC(probability=True)
+
+    # other options for the classifer below:
+    # cl = svm.SVC(C=1.0,kernel='rbf',probability=True)
     # cl = LogisticRegression(penalty='l1')
 
     cl.fit(X_train,Y_train)
 
     if isinstance(cl,LogisticRegression):
-        print "lr coefs: ", cl.coef_
+        if debug:
+            print ("lr coefs: ", cl.coef_)
         Y_dev_pred = cl.predict_proba(X_dev)
     else:
         Y_dev_pred = cl._predict_proba(X_dev)
 
     Y_dev_pred = [y for (_,y) in Y_dev_pred]
-    print "Y_dev_pred: ", Y_dev_pred
+    if debug:
+        print ("Y_dev_pred: ", Y_dev_pred)
 
     Y_train_pred = cl.predict(X_train)
-    print "train evaluation: "
+    if debug:
+        print ("train evaluation: ")
     eval(Y_train_pred,Y_train)
 
-    print "dev eval: "
+    if debug:
+        print ("dev eval: ")
     eval([y>.5 for y in Y_dev_pred],Y_dev)
 
     return Y_dev_pred,Y_dev_TNF,Y_dev_TNF_typed, scaler, cl
@@ -811,10 +843,10 @@ def eval(Y_pred,Y, write = True):
                 FN += 1
 
     if write:
-        print "TP: ", TP
-        print "FP: ", FP
-        print "TN: ", TN
-        print "FN: ", FN
+        print ("TP: ", TP)
+        print ("FP: ", FP)
+        print ("TN: ", TN)
+        print ("FN: ", FN)
 
     if (TP+FP)==0 or TP==0:
         pr=0
@@ -828,18 +860,18 @@ def eval(Y_pred,Y, write = True):
     acc = np.float(TP+TN)/len(Y)
 
     if write:
-        print "prec: ", pr
-        print "rec: ", rec
-        print "f1: ", f1
-        print "acc: ", acc
+        print ("prec: ", pr)
+        print ("rec: ", rec)
+        print ("f1: ", f1)
+        print ("acc: ", acc)
 
-        print str(TP)+"\t"+str(FP)+"\t"+str(TN)+"\t"+str(FN)+"\t"+str(pr)+"\t"+str(rec)+"\t"+str(f1)
+        print (str(TP)+"\t"+str(FP)+"\t"+str(TN)+"\t"+str(FN)+"\t"+str(pr)+"\t"+str(rec)+"\t"+str(f1))
 
     return pr,rec, acc
 
 #It will use Y_dev_base and Y_dev_pred0 to form Y_dev_pred which will be used to find precisions and recalls
 #It will also change Y_dev_TNFs so it will be used later
-def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, predPairSumCoefs, Y_dev_base, Y_dev_pred0,Y_dev_TNF0,Y_dev_TNF_typed0, lines_dev, root, args_dir, args):
+def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, predPairSumCoefs, Y_dev_base, Y_dev_pred0,Y_dev_TNF0,Y_dev_TNF_typed0, lines_dev, root, args):
 
     Y_dev_pred = []
     Y_dev_base_const = []
@@ -847,7 +879,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
     Y_dev_seen = []
     Y_dev_pred_seen = []
 
-    print "lemma baseilne eval:"
+    print ("lemma baseilne eval:")
     eval(Y_dev_base,Y_dev)
 
     if orig_fnames[1]:
@@ -858,25 +890,26 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         else:
             Y_dev_berant = berant.predict_Berant(root + "berant/", orig_fnames[1], context=True, berDS=True)
             Y_dev_berant2 = berant.predict_Berant(root + "berant/", orig_fnames[1], resource2=True,context=True, berDS=True)
-        Y_dev_ppdb_xl = predict.predict(root+'ent/all_comb_ppdb_xl.txt',orig_fnames[1])
-        Y_dev_ppdb_xxxl = predict.predict(root + 'ent/all_comb_ppdb_xxxl.txt',orig_fnames[1])
+        Y_dev_ppdb_xl = predict.predict(root+'ent/all_comb_ppdb_xl.txt',orig_fnames[1],args)
+        Y_dev_ppdb_xxxl = predict.predict(root + 'ent/all_comb_ppdb_xxxl.txt',orig_fnames[1],args)
 
-        print "berant dev eval:"
+        print ("berant dev eval:")
         eval(Y_dev_berant,Y_dev)
 
-        print "berant dev2 eval:"
+        print ("berant dev2 eval:")
         eval(Y_dev_berant2,Y_dev)
 
-        print "ppdb_xl dev eval:"
+        print ("ppdb_xl dev eval:")
         eval(Y_dev_ppdb_xl, Y_dev)
 
-        print "ppdb_xxxl dev eval:"
+        print ("ppdb_xxxl dev eval:")
         eval(Y_dev_ppdb_xxxl, Y_dev)
 
-        print "analyze ppdb"
+        print ("analyze ppdb")
         for i, y in enumerate(Y_dev):
             if Y_dev_ppdb_xxxl[i] != Y_dev[i]:
-                print "ppdb xxxl wrong: ", lines_dev[i]
+                if debug:
+                    print ("ppdb xxxl wrong: ", lines_dev[i])
 
 
     #Now do the final prediction!
@@ -890,13 +923,16 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         if not args.no_lemma_baseline and Y_dev_base[idx]:
             Y_dev_base_const.append(True)
             pred = True
-            print "lemma baseline: ", pred, lines_dev[idx]
+            if debug:
+                print ("lemma baseline: ", pred, lines_dev[idx])
         elif not args.no_constraints and a_ccg and qa_utils.constraint_y(p_ccg,q_ccg):
             pred = True
-            print "con_y: ", lines_dev[idx]
+            if debug:
+                print ("con_y: ", lines_dev[idx])
             Y_dev_base_const.append(True)
         elif not args.no_constraints and ((a_ccg and qa_utils.constraint_n(p_ccg,q_ccg)) or qa_utils.transitive_reverse(p_ccg,q_ccg,a_ccg)):
-            print "con_n: ", lines_dev[idx]
+            if debug:
+                print ("con_n: ", lines_dev[idx])
             Y_dev_base_const.append(False)
             pred = False
         else:
@@ -912,7 +948,8 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         predPair = p_ccg+"#"+q_ccg+"#"+str(a_ccg)
         if predPairSumCoefs:
             predPairSeen = (predPair in predPairSumCoefs and predPairSumCoefs[predPair] > 0)
-            print "is seen: ", predPair, predPairSeen
+            if debug:
+                print ("is seen: ", predPair, predPairSeen)
             if predPairSeen:
                 Y_dev_pred_seen.append(pred)
                 Y_dev_seen.append(Y_dev[idx])
@@ -929,36 +966,37 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
                     Y_dev_TNF_typed0[i][idx] = pred
 
     if not args.no_lemma_baseline:
-        print "eval baseline constraint: "
+        print ("eval baseline constraint: ")
         eval(Y_dev_base_const,Y_dev)
 
-    print "Berant final: "
+    print ("Berant final: ")
     eval(Y_dev_berant,Y_dev)
 
-    print "Berant2 final: "
+    print ("Berant2 final: ")
     eval(Y_dev_berant2,Y_dev)
 
-    print "ppdb_xl final: "
+    print ("ppdb_xl final: ")
     eval(Y_dev_ppdb_xl, Y_dev)
 
-    print "ppdb_xxxl final: "
+    print ("ppdb_xxxl final: ")
     eval(Y_dev_ppdb_xxxl, Y_dev)
 
-    print "analyze Berant"
+    print ("analyze Berant")
     for i,y in enumerate(Y_dev):
         if Y_dev_berant2[i]!=Y_dev[i]:
-            print "Berant2's wrong: ", lines_dev[i]
-
-
+            if debug:
+                print ("Berant2's wrong: ", lines_dev[i])
 
     for (i,y) in enumerate(Y_dev_pred):
-        print lines_dev[i]
-        print y, " ", Y_dev[i]
+        if debug:
+            print (lines_dev[i])
+            print (y, " ", Y_dev[i])
 
     fpr, tpr, thresholds = metrics.roc_curve(Y_dev, Y_dev_pred)
     if args.write:
         s1 = root + out_dir
-        s2 = root + out_dir
+        #uncomment s2 and op_tp_fp if you want to have _roc.txt file
+        # s2 = root + out_dir
         if not os.path.isdir(s1):
             os.mkdir(s1)
         # if not os.path.isdir(s2):
@@ -968,23 +1006,25 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         # op_tp_fp = open(s2 + args.method + "_roc.txt",'w')
 
     auc_fpr_tpr = metrics.auc(fpr, tpr)
-    print "auc_fpr_tpr: ", auc_fpr_tpr
+    if debug:
+        print ("auc_fpr_tpr: ", auc_fpr_tpr)
 
     auc = auc_fpr_tpr
 
     if args.write:
         op_pr_rec.write("auc: "+str(auc)+"\n")
 
-    print "tpr, fpr: "
+    if debug:
+        print ("tpr, fpr: ")
     for i in range(len(tpr)):
         try:
-            print tpr[i], " ", fpr[i], thresholds[i]
+            if debug:
+                print (tpr[i], " ", fpr[i], thresholds[i])
         except:
             pass
 
-    print ("num seen: ", len(Y_dev_seen), " vs ", len(Y_dev))
-    # Y_dev = Y_dev_seen# TODO: be very careful, changed for an experiment
-    # Y_dev_pred = Y_dev_pred_seen
+    if debug:
+        print ("num seen: ", len(Y_dev_seen), " vs ", len(Y_dev))
 
     (precision, recall, thresholds) = precision_recall_curve(Y_dev, Y_dev_pred)
     # print "main_auc:", util.get_auc(precision[:-1],recall[:-1])
@@ -996,20 +1036,26 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
             y_pred = 0
         op_Y_pred.write(str(Y_dev[i])+" "+str(y_pred)+"\n")
     # util.get_confidence_interval(Y_dev, Y_dev_pred)
-    print "avg pr score"
+    if debug:
+        print ("avg pr score")
     a = metrics.average_precision_score(Y_dev,Y_dev_pred)
-    print a
+    if debug:
+        print (a)
     b = metrics.average_precision_score(Y_dev, Y_dev_pred,average='micro')
-    print b
+    if debug:
+        print (b)
 
-    print "auc: ", auc
+    if debug:
+        print "auc: ", auc
+        print "auc: ", auc
 
     prs_high = []
     recs_high = []
 
     threshold = .16 #For Happy classification :) #But it will be set to threshold for precision ~ .76
     threshold_set = False
-    print "pr_rec:"
+    if debug:
+        print ("pr_rec:")
     for i in range(len(precision)):
 
         if args.write:
@@ -1023,13 +1069,16 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
             # if not threshold_set and precision[i] > .85 and precision[i] < .86:
                 threshold = thresholds[i]
                 threshold_set = True
-            print precision[i], " ", recall[i], thresholds[i]
+            if debug:
+                print (precision[i], " ", recall[i], thresholds[i])
         except:
-            print "exception: ", precision[i],recall[i]
+            if debug:
+                print ("exception: ", precision[i],recall[i])
             pass
 
 
-    print "threshold set to: ", threshold
+    if debug:
+        print ("threshold set to: ", threshold)
     Y_dev_pred_binary = [y>threshold for y in Y_dev_pred]
 
     all_FPs = []
@@ -1037,52 +1086,53 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
 
     sample_f = open('samples.txt','w')
 
-    if read_sims or args.instance_level:
-        if predPairFeatsTyped:
-            X_dev_typed = get_typed_feats(data_dev,predPairFeatsTyped)
+    if debug:
+        if read_sims or args.instance_level:
+            if predPairFeatsTyped:
+                X_dev_typed = get_typed_feats(data_dev,predPairFeatsTyped)
 
-        print "results:"
-        for (idx,(p,q,t1s,t2s,probs,a,l)) in enumerate(data_dev):
-            line_info = lines_dev[idx]+"\t"+p+"#"+q+"#"+str(a)+"\t"+str(t1s)+"#"+str(t2s)+"\t"
-            if predPairFeats:
-                line_info += str(predPairFeats[p + "#" + q + "#" + str(a)]) + "\t" + str(X_dev_typed[idx]) + "\t" +\
-                             str(Y_dev_pred[idx])
-            if Y_dev_pred_binary[idx] and Y_dev[idx]:
-                conf_l = "TP"
-            elif Y_dev_pred_binary[idx] and not Y_dev[idx]:
-                all_FPs.append(line_info)
-                conf_l = "FP"
-            elif not Y_dev_pred_binary[idx] and Y_dev[idx]:
-                all_FNs.append(line_info)
-                conf_l = "FN"
-            else:
-                conf_l = "TN"
-
-
-            print conf_l, ":", lines_dev[idx]
-            print "pred: ", Y_dev_pred[idx]
-            if predPairFeats:
-                predPair = p+"#"+q+"#"+str(a)
-                print predPairFeats[predPair]
-                # print predPairFeatsTyped[p+"#"+q+"#"+str(a)+"#"+t1+"#"+t2]
-                print X_dev_typed[idx]
-                if conf_l=="FN" and predPairSumCoefs and (predPair not in predPairSumCoefs or predPairSumCoefs[predPair]==0):
-                    print "unseen and FN"
-            print p+"#"+q+"#"+str(a)
-            print str(t1s)+"#"+str(t2s)+"\n"
-            if args.LDA:
-                print probs
-
-        print "ours vs Berant's"
-        for (idx,_) in enumerate(data_dev):
-            if Y_dev_pred_binary[idx]!=Y_dev_berant[idx]:
-                if Y_dev_pred_binary[idx] == Y_dev[idx]:
-                    print "ours is correct: ", lines_dev[idx]
+            print ("results:")
+            for (idx,(p,q,t1s,t2s,probs,a,l)) in enumerate(data_dev):
+                line_info = lines_dev[idx]+"\t"+p+"#"+q+"#"+str(a)+"\t"+str(t1s)+"#"+str(t2s)+"\t"
+                if predPairFeats:
+                    line_info += str(predPairFeats[p + "#" + q + "#" + str(a)]) + "\t" + str(X_dev_typed[idx]) + "\t" +\
+                                 str(Y_dev_pred[idx])
+                if Y_dev_pred_binary[idx] and Y_dev[idx]:
+                    conf_l = "TP"
+                elif Y_dev_pred_binary[idx] and not Y_dev[idx]:
+                    all_FPs.append(line_info)
+                    conf_l = "FP"
+                elif not Y_dev_pred_binary[idx] and Y_dev[idx]:
+                    all_FNs.append(line_info)
+                    conf_l = "FN"
                 else:
-                    print "Berant's is correct: ", lines_dev[idx]
+                    conf_l = "TN"
 
 
-    print "ours final: "
+                print (conf_l, ":", lines_dev[idx])
+                print ("pred: ", Y_dev_pred[idx])
+                if predPairFeats:
+                    predPair = p+"#"+q+"#"+str(a)
+                    print (predPairFeats[predPair])
+                    # print predPairFeatsTyped[p+"#"+q+"#"+str(a)+"#"+t1+"#"+t2]
+                    print (X_dev_typed[idx])
+                    if conf_l=="FN" and predPairSumCoefs and (predPair not in predPairSumCoefs or predPairSumCoefs[predPair]==0):
+                        print ("unseen and FN")
+                print (p+"#"+q+"#"+str(a))
+                print (str(t1s)+"#"+str(t2s)+"\n")
+                if args.LDA:
+                    print (probs)
+
+            print ("ours vs Berant's")
+            for (idx,_) in enumerate(data_dev):
+                if Y_dev_pred_binary[idx]!=Y_dev_berant[idx]:
+                    if Y_dev_pred_binary[idx] == Y_dev[idx]:
+                        print ("ours is correct: ", lines_dev[idx])
+                    else:
+                        print ("Berant's is correct: ", lines_dev[idx])
+
+
+    print ("ours final: ")
     eval(Y_dev_pred_binary,Y_dev)
 
     # print "samples FPs:"
@@ -1098,7 +1148,6 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
     #     sample_f.write(l + "\n")
 
     return Y_dev_pred, Y_dev_berant
-
 
 #Y_dev should be score
 def write_detailed_res(data,lines,Y,Y_pred, Y_berant, base_threshold = .75):
@@ -1173,15 +1222,20 @@ def calcGraphScores(gr, cl, scaler):
             fout.write(q + " " + str(s) + "\n")
         fout.write("\n")
 
-#These are fixed and won't change (too much)!
+#These (until parameters) are fixed and won't change (too much)!
+
 root = "../../gfiles/"
 sysargs = sys.argv[1:]
 args = opts(sysargs)
 
+debug = qa_utils.debug = baseline.debug = evaluation.util.debug = predict.debug = berant.debug = args.debug
+if args.tnf:
+    graph.graph_holder.debug = graph.sccGraph.debug = graph.gt_Graph.debug = debug
+
 if args.outDir:
     out_dir = args.outDir+"/"
 else:
-    out_dir = 'results/pr_rec_test/'
+    out_dir = 'results/pr_rec/'
 
 if args.sim_suffix:
     f_post_fix = args.sim_suffix
@@ -1191,6 +1245,7 @@ assert not args.snli or args.CCG
 assert not (args.rankDiscount and args.rankFeats)
 
 if not args.snli:
+    #we only use unary for the snli experiments
     fnames_unary = None
 
 if args.tnf:
@@ -1198,12 +1253,8 @@ if args.tnf:
 
 if args.dev:
     if args.LDA:
-        # fnames_CCG = [root+"ent/train_new_LDA15rels.txt",root+"ent/dev_new_LDA15rels.txt"]
         fnames_CCG = [root+"ent/train_new_LDA15rels.txt",root+"ent/dev_new_LDA15rels.txt"]
     else:
-        # fnames_CCG = [root + "ent/all_new_rels.txt", root + "ent/dev_new_rels.txt"]  # TODO: be careful
-        # fnames_CCG = [root+"ent/train_new_rels_l8.txt",root+"ent/dev_new_rels_l8.txt"]
-
         if args.origLevy:
             fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev1_rels_l8.txt"]
             fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/dev1_rels_oie.txt"]
@@ -1243,50 +1294,48 @@ elif args.snli:
     fnames_CCG = [root + "newsqa/squad_rels.txt", root + "newsqa/squad_rels.txt"]
     fnames_unary = [root + "newsqa/squad_rels_unary.txt", root + "newsqa/squad_rels_unary.txt"]
     orig_fnames = [None, None]
+
 elif args.calcSupScores or args.supervised:
     fnames_CCG = [root + "ent/dev_rels.txt", root + "ent/train0_rels.txt"]
     orig_fnames = [root + "ent/dev.txt", root + "ent/train0.txt"]
 
 elif args.test:
     if args.LDA:
-        # fnames_CCG = [root+"ent/train_new_LDA15rels.txt",root+"ent/dev_new_LDA15rels.txt"]
         fnames_CCG = [root+"ent/train_new_LDA15rels.txt",root+"ent/devTrain_new_LDA15rels.txt"]
     else:
-        # fnames_CCG = [root+"ent/train_new_rels.txt",root+"ent/devTrain_new_rels.txt"]
-        # fnames_CCG = [root + "ent/train_new_rels_l8.txt", root + "ent/devTrain_new_rels_l8.txt"]
         if args.origLevy:
-            fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/trainTest1_rels.txt"]  # TODO: be careful
+            fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/trainTest1_rels.txt"]
             fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/trainTest1_rels_oie.txt"]
-            orig_fnames = [root + "ent/all_comb.txt", root + "ent/trainTest1.txt"]  # TODO: be careful
+            orig_fnames = [root + "ent/all_comb.txt", root + "ent/trainTest1.txt"]
         else:
-            fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_rels.txt"]  # TODO: be careful
+            fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_rels.txt"]
             fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/test_rels_oie.txt"]
-            orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]  # TODO: be careful
+            orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
 
 elif args.test_v2:
-    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/test_rels_v2.txt"]  # TODO: be careful
+    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/test_rels_v2.txt"]
     fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/test_rels_oie.txt"]
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]  # TODO: be careful
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
 
 elif args.test_v3:
-    fnames_CCG = [root + "ent/all_comb_rels_v3.txt", root + "ent/test_rels_v3.txt"]  # TODO: be careful
+    fnames_CCG = [root + "ent/all_comb_rels_v3.txt", root + "ent/test_rels_v3.txt"]
     fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/test_rels_oie.txt"]
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]  # TODO: be careful
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
 
 elif args.test_dir:
-    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_dir_rels.txt"]  # TODO: be careful
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_dir_rels.txt"]
     fnames_oie = None
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_dir.txt"]  # TODO: be careful
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_dir.txt"]
 
 elif args.dev_dir:
-    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev_dir_rels.txt"]  # TODO: be careful
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev_dir_rels.txt"]
     fnames_oie = None
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_dir.txt"]  # TODO: be careful
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_dir.txt"]
 
 elif args.zeichner:
-    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/zeichner_rels.txt"]  # TODO: be careful
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/zeichner_rels.txt"]
     fnames_oie = None
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/zeichner.txt"]  # TODO: be careful
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/zeichner.txt"]
 
 elif args.test_naacl:
     fnames_CCG = [root + "ent/all_tensed_rels.txt", root + "ent/naacl_levy_format_rels.txt"]
@@ -1297,12 +1346,10 @@ elif args.test_naacl_untensed:
     fnames_CCG = [root + "ent/naacl_levy_format_untensed_rels.txt", root + "ent/naacl_levy_format_untensed_rels.txt"]
     fnames_oie = None
     orig_fnames = [root + "ent/naacl_levy_format.txt", root + "ent/naacl_levy_format.txt"]
-
 else:
     if args.LDA:
         fnames_CCG = [root+"ent/all_new_LDA15rels.txt",root+"ent/all_new_LDA15rels.txt"]
     else:
-
         if args.dsPath:
             fnames_CCG = [root + args.dsPath +"_rels.txt", root + args.dsPath +"_rels.txt"]
         else:
@@ -1315,26 +1362,23 @@ else:
     else:
         orig_fnames = [root + "ent/all.txt", root + "ent/all.txt"]
 
-
 #parameters
-#parameters
-
-# if len(sysargs)>0:
 
 CCG = args.CCG
-# prepositions = util.read_prepositions()
 typed = args.typed
 supervised = args.supervised
 oneFeat = args.oneFeat#as opposed to average features!
 gpath = args.gpath
 method = args.method
 useSims = args.useSims
-print "gpath: ", gpath
+if gpath:
+    print ("gpath: ", gpath)
 if method is None:
     method = "x"
 write = args.write
 
-print "args.tnf: ", args.tnf
+if debug:
+    print ("args.tnf: ", args.tnf)
 
 if args.tnf:
     from graph import graph_holder
@@ -1344,24 +1388,25 @@ elif args.instance_level:
 else:
     read_sims = True
 
-print "args: ", CCG
+if debug:
+    print ("args: ", CCG)
 
 if gpath:
     engG_dir_addr = "../../gfiles/" + gpath +"/"
-    print "dir_addr: ", engG_dir_addr
+    if debug:
+        print ("dir_addr: ", engG_dir_addr)
 else:
     engG_dir_addr = None
 
 if CCG:
     fnames = fnames_CCG
     fname_feats = None
-    sim_path = root + "ent/ccg5.sim"#TODO: be careful!
+    sim_path = root + "ent/ccg.sim"
     if not gpath:
         if not args.featsFile:
             raise Exception("featsFile not provided")
         else:
             fname_feats = root + "ent/" + args.featsFile + ".txt"
-
 else:
     fnames = fnames_oie
     fname_feats = None
@@ -1373,25 +1418,19 @@ else:
             fname_feats = root + "ent/" + args.featsFile + ".txt"
 
 
-rels2Sims = util.read_rels_sim(sim_path,CCG,useSims)
+rels2Sims = evaluation.util.read_rels_sim(sim_path, CCG, useSims)
 
 #end parameters
 
 
-#Form the samples
-
+#Form the samples (dev will contain the test if you use --test instead of --dev
 [Y_train_base, Y_dev_base] = [baseline.predict_lemma_baseline(fname) for fname in orig_fnames]
-
-
-cos_feats_list = None
 
 #Do the training and prediction!
 
 if orig_fnames[0]:
-    lines_train = open(orig_fnames[0]).read().splitlines()
     lines_dev = open(orig_fnames[1]).read().splitlines()
 else:
-    lines_train = None
     lines_dev = None
 
 
@@ -1404,23 +1443,19 @@ if not args.instance_level:
                                                                                                            fname_feats,
                                                                                                            rels2Sims,
                                                                                                            args)
-
     if not args.snli:
         Y_dev_pred0, Y_dev_TNF0, Y_dev_TNF_typed0, cl, scaler = fit_predict(data_list, predPairFeats,
                                                                             predPairFeatsTyped, predPairConnectedList,
-                                                                            predPairConnectedWeightList,
                                                                             predPairTypedConnectedList,
-                                                                            predPairTypedConnectedWeightList,
-                                                                            predPairTypedExactFound, cos_feats_list,
-                                                                            lines_train, args)
+                                                                            predPairTypedExactFound,
+                                                                            args)
 elif args.instance_level:
-    data_list = [util.read_data(fnames[i], orig_fnames[i], args.CCG, args.typed, args.LDA) for i in
+    data_list = [evaluation.util.read_data(fnames[i], orig_fnames[i], args.CCG, args.typed, args.LDA) for i in
                  range(len(fnames))]
-    Y_dev_pred0 = util.read_instance_level_probs(fname_feats)
+    Y_dev_pred0 = evaluation.util.read_instance_level_probs(fname_feats)
     assert len(Y_dev_pred0) == len(Y_dev_base)
 
     Y_dev_TNF0, Y_dev_TNF_typed0, cl, scaler, predPairSumCoefs, predPairFeats, predPairFeatsTyped = None, None, None, None, None, None, None
-
 
 
 #only calc the supervised scores and quit
@@ -1442,7 +1477,7 @@ if args.calcSupScores:
 
 
         if num_f % 50 == 0:
-            print "num files: ", num_f
+            print ("num processed files: ", num_f)
 
         gpath=engG_dir_addr+f
         # if f not in acceptableFiles:
@@ -1450,11 +1485,8 @@ if args.calcSupScores:
 
         if f_post_fix not in f or os.stat(gpath).st_size == 0:
             continue
-        print "fname: ", f
+        print ("fname: ", f)
         num_f += 1
-
-        # print "gLines:", gLines
-
 
         gr = graph.Graph(gpath=gpath, args = args)
         gr.set_Ws()
@@ -1469,17 +1501,19 @@ if args.calcSupScores:
 elif not args.snli:
 
     data_dev = data_list[1]
-    data_dev_CCG = util.read_data(fnames_CCG[1],orig_fnames[1],args.CCG,args.typed,args.LDA)
+    data_dev_CCG = evaluation.util.read_data(fnames_CCG[1], orig_fnames[1], args.CCG, args.typed, args.LDA)
     Y_dev = [l for (_,_,_,_,_,_,l) in data_dev]
 
-    print "baseline eval:"
+    print ("baseline eval:")
     eval(Y_dev_base,Y_dev)
 
-    print Y_dev_pred0
+    if debug:
+        print (Y_dev_pred0)
 
-    _, Y_berant = final_prediction(data_dev,data_dev_CCG, predPairFeats ,predPairFeatsTyped, predPairSumCoefs, Y_dev_base, Y_dev_pred0,Y_dev_TNF0,Y_dev_TNF_typed0, lines_dev, root, out_dir, args)
+    _, Y_berant = final_prediction(data_dev,data_dev_CCG, predPairFeats ,predPairFeatsTyped, predPairSumCoefs, Y_dev_base, Y_dev_pred0,Y_dev_TNF0,Y_dev_TNF_typed0, lines_dev, root, args)
 
-    print ("Y_dev_TNF0"), Y_dev_TNF0
+    if debug:
+        print ("Y_dev_TNF0"), Y_dev_TNF0
 
     if Y_dev_TNF0 is not None:
 
@@ -1489,26 +1523,33 @@ elif not args.snli:
 
         op_pr_rec_TNF = open(s1 + args.method + "_TNF.txt",'w')
         op_pr_rec_TNF_typed = open(s1 + args.method + "_TNF_typed.txt",'w')
-        print "pr rec TNF: "
+
+        if debug:
+            print ("pr rec TNF: ")
         for i in range(len(Y_dev_TNF0)):
             pr, rec, _ = eval(Y_dev_TNF0[i],Y_dev)
             op_pr_rec_TNF.write(str(pr)+"\t"+str(rec)+"\n")
-            print pr, " ", rec
+            if debug:
+                print (pr, " ", rec)
 
-        print "pr rec TNF Typed: "
+        if debug:
+            print ("pr rec TNF Typed: ")
         for i in range(len(Y_dev_TNF_typed0)):
 
             if args.tnf_avg:
-                print "TNF typed pr_rec:"
-                write_detailed_res(data_dev,lines_dev,Y_dev,Y_dev_TNF_typed0[i], Y_berant)
+                if debug:
+                    print ("TNF typed pr_rec:")
+                    write_detailed_res(data_dev,lines_dev,Y_dev,Y_dev_TNF_typed0[i], Y_berant)
 
             else:
-                print "typed ", i
+                if debug:
+                    print ("typed ", i)
 
                 Y_dev_pred_binary = Y_dev_TNF_typed0[i]
-
-                write_detailed_res_binary(data_dev,lines_dev,Y_dev,Y_dev_pred_binary,Y_dev_pred_binary, Y_berant)
+                if debug:
+                    write_detailed_res_binary(data_dev,lines_dev,Y_dev,Y_dev_pred_binary,Y_dev_pred_binary, Y_berant)
 
                 pr, rec, _ = eval(Y_dev_TNF_typed0[i],Y_dev)
                 op_pr_rec_TNF_typed.write(str(pr)+"\t"+str(rec)+"\n")
-                print pr, " ", rec
+                if debug:
+                    print (pr, " ", rec)

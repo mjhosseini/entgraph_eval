@@ -3,14 +3,16 @@ from copy import deepcopy
 import sys
 import numpy as np
 
+debug = False
+
 class Graph:
 
     num_feats = -1
     zeroFeats = None
     num_edges = 0
     num_edges_threshold = 0#cos >1e-4
-    threshold = -1 #TODO: be careful
-    featIdx = 4#TODO: be careful
+    threshold = -1
+    featIdx = 4
 
     #There are two ways to init!
     def __init__(self,gpath=-1,idxes=-1,idx2Node=-1,idx2ArrIdx = None, idxpair2score = None, nodes=-1,name=-1, args=None):
@@ -30,7 +32,8 @@ class Graph:
     def set_num_feats(self,gpath):
         #get the first pred
         f = open(gpath)
-        print ("gpath: ", gpath)
+        if debug:
+            print ("gpath: ", gpath)
 
         if self.args and self.args.saveMemory:
             Graph.num_feats = 2
@@ -48,7 +51,8 @@ class Graph:
                     break
             if line.endswith("sims") or line.endswith("sim"):
                 num_feats += 1
-        print ("num_feats: ", Graph.num_feats)
+        if debug:
+            print ("num_feats: ", Graph.num_feats)
         f.close()
 
     def buildGraphFromFile(self,gpath):
@@ -74,7 +78,7 @@ class Graph:
         for line in f:
             line = line.replace("` ","").rstrip()
             # print (line)
-            if lIdx % 1000000 == 0 and lIdx!=0:
+            if debug and lIdx % 1000000 == 0 and lIdx!=0:
                 print ("lidx: ", lIdx)
 
                 s1 = sys.getsizeof(self.pred2Node)
@@ -110,11 +114,8 @@ class Graph:
 
             lIdx += 1
             if first:
-
                 self.name = line
-
                 self.types = line.split(",")[0].split(" ")[1].split("#")
-
                 if len(self.types)<2:
                     self.types = line.split(" ")[0].split("#")
 
@@ -204,7 +205,8 @@ class Graph:
 
 
         f.close()
-        print ("num edges in gr: ", Graph.num_edges, str(Graph.threshold), Graph.num_edges_threshold, gpath)
+        if debug:
+            print ("num edges in gr: ", Graph.num_edges, str(Graph.threshold), Graph.num_edges_threshold, gpath)
 
         self.idxes = range(len(self.nodes))
 
@@ -233,7 +235,8 @@ class Graph:
             self.unary2nodeIdxes[unaries[0]].append(node.idx)
             self.unary2nodeIdxes[unaries[1]].append(node.idx)
         except:
-            print ("unary exception for: ", node.id)
+            if debug:
+                print ("unary exception for: ", node.id)
             pass
 
 
@@ -478,7 +481,7 @@ class OEdge:
     def add_sim(self,sim, idx,order):
 
 
-        if ")" in sim or "_" in sim:#TODO: see what's happening here!
+        if ")" in sim or "_" in sim:
             return
         try:
             self.sims[idx] = np.float(sim)
@@ -488,7 +491,8 @@ class OEdge:
                 if self.sims[0]>Graph.threshold:
                     Graph.num_edges_threshold += 1
         except ValueError:
-            print ("exception for: ", sim)
+            if debug:
+                print ("exception for: ", sim)
             self.sims[idx] = 0
 
 

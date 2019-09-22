@@ -3,9 +3,8 @@ import numpy as np
 from sklearn.metrics import precision_recall_curve
 from sklearn import metrics
 from graph import graph
-import os
-import sys
-smoothparam = 20
+
+debug = False
 
 def getUnaryFrom_binary(pred):
     modifier = ""
@@ -21,7 +20,8 @@ def getUnaryFrom_binary(pred):
     type2 = ss[2].replace("_1","").replace("_2","")
     ss = pred.split(",")
     if len(ss)!=2:
-        print ("bad pred: ", pred)
+        if debug:
+            print ("bad pred: ", pred)
         return None
 
     unary1 = ss[0]+"#"+type1
@@ -71,7 +71,7 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
         line = l.replace("\n","")
 
         # if idx==10000:
-        #     break#TODO: remove this
+        #     break
 
         if lines_orig:
             line_orig = lines_orig[idx]
@@ -81,7 +81,8 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
         ss = line.split("\t")
 
         if len(ss)<3:
-            print ("bad len problem: ", line)
+            if debug:
+                print ("bad len problem: ", line)
             idx += 1
             continue
 
@@ -107,7 +108,6 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
             t2s = []
             probs = []
             while i<len(tss):
-                # print tss[i]
                 ts = tss[i].split("#")
                 t1 = ts[0]
                 t2 = ts[1]
@@ -133,7 +133,6 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
             if line_orig:#lazy way to check snli
                 if len(q_all)>1 and len(p_all)>1:
                     a = qa_utils.aligned_args_rel(q_all,p_all)
-                    # print "a: ", a, " ", line
 
         else:
             if line_orig:
@@ -159,14 +158,17 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
             if line_orig:
                 if a:
                     if q_arg1 != p_arg1 or q_arg2!=p_arg2:
-                        print ("not same args: ", line_orig)
-                        print (line)
+                        if debug:
+                            print ("not same args: ", line_orig)
+                            print (line)
                 else:
                     if q_arg1 != p_arg2 or q_arg2!=p_arg1:
-                        print ("not same args: ", line_orig)
-                        print (line)
+                        if debug:
+                            print ("not same args: ", line_orig)
+                            print (line)
         except:
-            print ("problem: ", line)
+            if debug:
+                print ("problem: ", line)
 
 
 
@@ -178,9 +180,7 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
         else:
             l = 1
 
-        # print "label: ", l
         data.append((p,q,t1s,t2s,probs,a,l))
-
         idx += 1
 
     return data
@@ -196,13 +196,14 @@ def read_data_unary(dpath, is_typed):
     for l in f:
         line = l.strip()
         # if idx==100000:
-        #     break#TODO: remove this
+        #     break
         # print line
 
         ss = line.split("\t")
 
         if len(ss)<2:
-            print ("bad len problem unary: ", line)
+            if debug:
+                print ("bad len problem unary: ", line)
             continue
 
         q_all = ss[0].split(" ")
@@ -211,7 +212,6 @@ def read_data_unary(dpath, is_typed):
         p = p_all[0]
 
         if (p.endswith(".1") and q.endswith(".1")) or (p.endswith(".2") and q.endswith(".2")):
-            # print line
             if is_typed:
                 t1 = p_all[1].split("::")[1]
             else:
@@ -356,9 +356,11 @@ def read_predPairFeats(fname, data_list=None):
                 if first:
                     num_feats = len(f_ss)
                     first = False
-                    print ("Feature file datums contain", num_feats, "features")
+                    if debug:
+                        print ("Feature file datums contain", num_feats, "features")
                 if not first and len(f_ss) != num_feats:
-                    print ("ERROR IN PARSING" + line)
+                    if debug:
+                        print ("ERROR IN PARSING" + line)
                     continue
                 # predPairFeats[ss[0]] = [np.float(f)*predPairSumCoefs[ss[0]] for f in f_ss]
                 # predPairFeats[ss[0]].extend([np.float(f) for f in f_ss])
@@ -379,7 +381,8 @@ def read_predPairFeats(fname, data_list=None):
                     num_feats = len(f_ss)
                     first = False
                 if not first and len(f_ss) != num_feats:
-                    print ("ERROR IN PARSING" + line)
+                    if debug:
+                        print ("ERROR IN PARSING" + line)
                     continue
                 predPairFeatsTyped[ss[0]] = np.array([np.float(f) for f in f_ss])
         except:
@@ -405,7 +408,8 @@ def read_predPairFeats(fname, data_list=None):
 
 
                     if ppairTyped not in predPairFeatsTyped:
-                        print ("setting new: ", ppairTyped)
+                        if debug:
+                            print ("setting new: ", ppairTyped)
                         predPairFeatsTyped[ppairTyped] = np.zeros(num_feats) #list(deepcopy(graph.Graph.zeroFeats))
 
     for i in range(lIdx,len(line)):
@@ -437,13 +441,13 @@ def read_rels_sim(fpath, isCCG, useSims):
         qss = []
         idx = 1
         while (idx<len(ss)):
-            # if idx>40:#TODO: remove this?
+            # if idx>40:
             #     break
             q = ss[idx]
             idx += 1
             sim = np.float(ss[idx])
             idx+=1
-            # if sim<.90:#TODO: be careful
+            # if sim<.90:
             #     continue
 
             if (isCCG):
@@ -453,11 +457,11 @@ def read_rels_sim(fpath, isCCG, useSims):
                 if modifier!="":
                     q = modifier+"__"+q
                 try:
-                    #TODO: be careful
                     if not qa_utils.same_CCG_args(p,q):# or not qa_utils.same_main_words(p,q,prepositions)
                         continue
                 except:
-                    print ("exception for: ", q)
+                    if debug:
+                        print ("exception for: ", q)
                     continue
 
             if q not in qs:
@@ -471,8 +475,9 @@ def read_rels_sim(fpath, isCCG, useSims):
         if len(qs)==0 or qs[0]!=p:
             qs.insert(0,p)
             qss.append((p, 1))
-        print ("p: ", p)
-        print ("sims: ", qss)
+        if debug:
+            print ("p: ", p)
+            print ("sims: ", qss)
         rel2Sims[p] = qs
 
     return rel2Sims
@@ -496,7 +501,8 @@ def down_sample_negs(X,Y):
             Y2.append(Y[i])
 
     pair_recall = np.float(np.count_nonzero(Y2))/np.count_nonzero(Y)
-    print ("pair recall: ", pair_recall)
+    if debug:
+        print ("pair recall: ", pair_recall)
     X = X2
     Y = Y2
 
@@ -521,8 +527,9 @@ def compute_corr_coeff(X, Y):
 
     corr_coef = np.corrcoef(X_all,rowvar=0)
 
-    print ("corr coef:")
-    print (corr_coef[:,K])
+    if debug:
+        print ("corr coef:")
+        print (corr_coef[:,K])
 
 def compute_pair_recalls(X,Y):
 

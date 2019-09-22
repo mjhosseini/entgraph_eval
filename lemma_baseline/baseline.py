@@ -1,6 +1,7 @@
 #Written by Omer Levy, modified by Javad Hosseini
 import numpy as np
 from nltk.corpus import wordnet as wn
+debug = False
 
 from qa_utils import get_lemmas_only_verbs, get_lemmas_no_stopwords, get_lemmas, get_tuples
 
@@ -48,7 +49,8 @@ class Baseline:
 
     @staticmethod
     def aligned_args(q, a):
-        print (q,a)
+        if debug:
+            print (q,a)
         q_arg = get_lemmas_no_stopwords(q[2], wn.NOUN)
         if q_arg == get_lemmas_no_stopwords(a[2], wn.NOUN):
             return True

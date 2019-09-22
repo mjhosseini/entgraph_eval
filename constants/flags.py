@@ -63,6 +63,7 @@ def opts(actual_args=None):
     flag("dsPath", "optionally, provide a test set path")
     flag("outDir", "optionally, where to output the pr_recs")
     flag("sim_suffix", "similarity files suffix", ftype=str)  # e.g., 0 4, means features 0 and 4
+    boolflag("debug", "writing debug info")
 
     boolflag("LDA", "full distributional LDA probabilities for types")  # deprecated
 

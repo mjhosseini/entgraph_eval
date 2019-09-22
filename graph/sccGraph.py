@@ -2,13 +2,16 @@ import sys
 sys.path.append("..")
 from gt_Graph import gt_Graph
 
+debug = False
+
 class SCCGraph:
 
     fastInit = False
 
     def __init__(self, pgraph, lmbda,finalResLines=None,lIdx=-1):
         if pgraph:
-            print "num nodes: ", len(pgraph.nodes)
+            if debug:
+                print ("num nodes: ", len(pgraph.nodes))
 
 
         self.pgraph = pgraph
@@ -18,7 +21,8 @@ class SCCGraph:
             return
 
     def read_from_file(self,lines,lIdx):
-        print "first line: ", lines[lIdx]
+        if debug:
+            print ("first line: ", lines[lIdx])
         self.lmbda = float(lines[lIdx].split()[1])
         self.idx2ArrayIdx = {}
         lIdx += 1
@@ -71,7 +75,8 @@ class SCCGraph:
         SCC_g = self.scc
 
         for idx in range(SCC_g.num_vertices()):
-            print "\ncomponent ", idx
+
+            print ("\ncomponent ", idx)
             nodes_idxes = SCC_g.cnodes[idx]
             for iidx in nodes_idxes:
                 node = self.pgraph.nodes[iidx]
@@ -81,4 +86,5 @@ class SCCGraph:
                 neigh_idx = SCC_g.cnodes[neigh][0]
                 id2 = self.pgraph.nodes[neigh_idx].id
                 print " => ", neigh, " ", id2
+
         print "writing Done"
