@@ -13,13 +13,13 @@ Please follow the below instructions to create entailment graphs and/or replicat
 **Step 1**: Clone the entgraph_eval project and download necessary files.
 
     git clone https://github.com/mjhosseini/entgraph_eval.git
-    wget https://dl.dropboxusercontent.com/s/qu6zc3awenwkwn2/gfiles.zip
+    wget https://dl.dropboxusercontent.com/s/j7sgqhp8a27qgcf/gfiles.zip
     unzip gfiles.zip
     rm gfiles.zip
 
 **Step 2**: Add the learned entailment graphs folder inside the gfiles folder. You can also download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
 
-**Step 3**:
+**Step 3**: Install dependencies (if required)
 
     pip3 install numpy
     pip3 install scipy
@@ -29,7 +29,26 @@ Please follow the below instructions to create entailment graphs and/or replicat
     python -m nltk.downloader stopwords
     pip3 install sklearn
 
-**Step 4**: You can simply download the linked and parsed NewsSpike corpus (NewsSpike_CCG_parsed.tar.gz) to your preferred location and skip to step 5. For more information on the parsing format, please see parsing_readme.txt. Alternatively, follow steps 4.1 to 4.5 to parse and link the NewsSpike corpus (or your own corpus) into predicate argument structure using the graph-parser (developped by Siva Reddy) based on CCG parser (easyCCG).
+**Step 4**: Run the evaluation script.
+
+    cd entgraph_eval/evaluation/
+    python3 eval.py --gpath global_graphs --dev --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
+    
+The main parameters are these ones:
+
+featIdx=1: If there are more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder), this index specifies which similarity measure should be used.
+
+--exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrives in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrives in), then the code looks at the uniform average of the scores for those relations across all the graphs. If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest. Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs.
+
+Other parameters that should be mainly not changed:
+
+CCG=1: Evaluate based on entailment graphs and datasets with CCG parser extractions (0 means openIE style).
+
+typed=1: Use the types of arguments. If set to 0, it will ignore all the types, but the entailment graph should also be untyped (e.g., only thing#thing_sim.txt as the only entailment graph).
+
+supervied=0: All the experiments are unsupervised
+
+oneFeat=1: This means that we only use one of the similarity measures and don't 
 
 **Step 4.1**: Download the NewsSpike Corpus from http://www.cs.washington.edu/ai/clzhang/release.tar.gz and copy the data folder inside entGraph.
    
