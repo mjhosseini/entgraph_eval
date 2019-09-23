@@ -40,6 +40,8 @@ featIdx=1: If there are more than one similarity measures in the entailment grap
 
 --exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrives in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrives in), then the code looks at the uniform average of the scores for those relations across all the graphs. If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest. Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs.
 
+--method: A given name to the similarity measures (e.g., global_scores in our case).
+
 Other parameters that should be mainly not changed:
 
 CCG=1: Evaluate based on entailment graphs and datasets with CCG parser extractions (0 means openIE style).
@@ -48,65 +50,13 @@ typed=1: Use the types of arguments. If set to 0, it will ignore all the types, 
 
 supervied=0: All the experiments are unsupervised
 
-oneFeat=1: This means that we only use one of the similarity measures and don't 
+useSims=0: If we set this to 1, the code will look into other relations that have high similarity measures to the relations of interest in GloVe embedding space. We did not use this option in the above papers, but it will improve the results slightly. If you're interested in testing other embedding spaces, you can do that by providing a file in the format of gfiles/ent/ccg.sim.
 
-**Step 4.1**: Download the NewsSpike Corpus from http://www.cs.washington.edu/ai/clzhang/release.tar.gz and copy the data folder inside entGraph.
-   
-**Step 4.2**: Split the input json file line by line: run entailment.Util.convertReleaseToRawJson(inputJsonAddress) 1>rawJsonAddress (by changing Util's main function), where inputJsonAddress should be by default "data/release/crawlbatched". Run the code as "java -cp lib/*:bin entailment.Util "data/release/crawlbatched" 1>news_raw.json"
+oneFeat=1: This means that we only use one of the similarity measures and don't combine them in any way.
 
-**Step 4.3**: Extract binary relations from the input json file: Run the bash script: `prArgs.sh` (This takes about 12 hours on the servers I used with 20 threads.) Change the input and output address as necessary. You can find `prArgs.sh` on the codalab page.
+--no_lemma_baseline: It won't run the lemma_baseline in advance. All the results in the papers are WITH the lemma baseline.
 
-The number of threads is a parameter which might need to be changed in constants.ConstantsParsing. Please keep the other parameters unchanged.
+--no_constraints: It won't use the extra constraints in advance. All the results in the papers are WITH the additional constraints.
 
-example:
+**Step 5**: (Optional) The above code might take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features. If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with useSims=1, because this option can't be turned on in this step otherwise.
 
-    fName=news_raw.json
-    oName1=predArgs_gen.txt (binary relations with at least one Named Entity argument, which is used in our experiments).
-    oName2=predArgs_NE.txt (binary relations with two NE arguments).
-
-**Step 4.4**: Download news_linked.json and put it in folder aida. This is the output of NE linking (In our experiments, we used AIDALight).
-
-**Step 4.5**: Run entailment.Util (function convertPredArgsToJson) with these arguments: predArgs_gen.txt true true 12000000 aida/news_linked.json 1>news_gen.json
-
-    predArgs_gen.txt: output of step 4.3.
-    aida/news_linked.json: output of step 4.4.
-    120000000 is an upper bound on the number of lines of the corpus (this might need to be changed for a new corpus). 
-    
-For larger corpora, instead of convertPredArgsToJson, you can use convertPredArgsToJsonUnsorted which will get less memory, but the output isn't sorted (this doesn't change any of the results for this paper).
-
-**Step 5**: Extract the interim outputs:
-
-You might need to set a few parameters in constants.ConstantsAgg:
-
-  1. minArgPairForPred is C_1 in the paper, which is set to 3 by default.
-
-  2. minPredForArgPair is C_2 in the paper, which is set to 3 by default.
-
-  3. relAddress is the output of step 4.
-
-  4. simsFolder is where the final output will be stored.
-
-You need to run the entailment.vector.EntailGraphFactoryAggregator using:
-
-java -Xmx100G -cp lib/*:bin  entailment.vector.EntailGraphFactoryAggregator
-
-**Step 6**: The global learning: Run graph.softConst.TypePropagateMN. A few parameters might need to be set in constants.ConstantsGraphs as follows:
-
-  1. featName is the feature name to be used, which is by default BINC score.
-  2. root is the folder address storing the output of step 5.
-  3. constants.ConstantsSoftConst:
-
-A few more parameters in constants.ConstantsSoftConst:
-
-  1. numThreads, which I set that to 60 for a machine with 20 cpus, because not all the threads will run together. But you might need to change it.
-  2. numIters is the number of iterations. lambda, lambda_2 and tau are set by default for Cross-Graph + Paraphrase-Resolution global soft constraints experiments, but can be tuned for another dataset.
-  
-**Step 7**: Evaluate the entailment scores: The datasets for evaluation are dev.txt and test.txt, with their parsed relations in dev_rels.txt and test_rels.txt.
-
-### Download Learned Entailment Graphs
-
-**Global Entailment Scores**: The globally consistent entailment scores are in "global_graphs.tar.gz".
-
-For each type pair, like person#location, there is a file person#location_sim.txt which has the predicate similarities. For each predicate, its local and global similarities to other predicates are listed.
-
-<!---Step 7**: Please follow the instructions outlined in xxx to test the graphs on the entailment datasets. -->
