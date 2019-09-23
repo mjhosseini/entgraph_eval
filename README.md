@@ -34,27 +34,27 @@ Please follow the below instructions to create entailment graphs and/or replicat
     cd entgraph_eval/evaluation/
     python eval.py --gpath global_graphs --dev --sim_suffix _gsim.txt --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
     
-The code writes a file called pr_ The code writes the precisions and recalls of a few baselines. It also writes the precision and recall for the method at precision~0.75.
+The code outputs a file called gfiles/results/pr_rec/method_name.txt (e.g., gfiles/results/pr_rec/global_scores.txt). This file contains the precisions and recalls that are obtained by changing a threshold on the entailment scores. It also contains the area under precision-recall curve (for precision>=.5). The code also writes the precisions and recalls of a few baselines as well as the precision and recall for the entailment graphs at precision~0.75.
 
 The main parameters are these ones:
 
 --sim_suffix: The suffix of the entailment graph files, e.g., _gsim.txt.
 
-featIdx=1: If there are more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder), this index specifies which similarity measure should be used.
+-- featIdx 1: There are usually more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder). This index specifies which similarity measure should be used.
 
---exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrives in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrives in), then the code looks at the uniform average of the scores for those relations across all the graphs. If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest. Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs.
+--exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrives in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrives in), then the code looks at the uniform average of the scores for those relations across all graphs (the main results with global similarities in the papers). If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest (the local results in the papers). Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs (the avg results in the first paper).
 
 --method: A given name to the similarity measures (e.g., global_scores in our case).
 
-Other parameters that should be mainly not changed:
+Other parameters that should mainly remain unchanged:
 
-CCG=1: Evaluate based on entailment graphs and datasets with CCG parser extractions (0 means openIE style).
+--CCG 1: Evaluate based on entailment graphs and datasets with CCG parser extractions (0 means openIE extractions). Our preleminary experiments showed better results with the CCG extractions.
 
-typed=1: Use the types of arguments. If set to 0, it will ignore all the types, but the entailment graph should also be untyped (e.g., only thing#thing_sim.txt as the only entailment graph).
+--typed 1: Use the types of arguments. If set to 0, it will ignore all the types, but the entailment graph should also be untyped (e.g., only thing#thing_sim.txt as the only entailment graph).
 
-supervied=0: All the experiments are unsupervised
+--supervied 0: All the experiments are unsupervised.
 
-useSims=0: If we set this to 1, the code will look into other relations that have high similarity measures to the relations of interest in GloVe embedding space. We did not use this option in the above papers, but it will improve the results slightly. If you're interested in testing other embedding spaces, you can do that by providing a file in the format of gfiles/ent/ccg.sim.
+--useSims 0: If we set this to 1, the code will look into other relations that have high similarity measures to the relations of interest in GloVe embedding space. We did not use this option in the above papers, but using it will improve the results slightly. If you're interested in testing other embedding spaces, you can do that by providing a file in the format of gfiles/ent/ccg.sim.
 
 oneFeat=1: This means that we only use one of the similarity measures and don't combine them in any way.
 
