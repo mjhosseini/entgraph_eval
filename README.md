@@ -44,7 +44,7 @@ The main parameters are these ones:
 
 --exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrives in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrives in), then the code looks at the uniform average of the scores for those relations across all graphs (the main results with global similarities in the papers). If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest (the local results in the papers). Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs (the avg results in the first paper).
 
---method: A given name to the similarity measures (e.g., global_scores in our case).
+--method global_scores: A given name to the similarity measures (e.g., global_scores in our case).
 
 Other parameters that should mainly remain unchanged:
 
