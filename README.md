@@ -62,9 +62,16 @@ oneFeat=1: This means that we only use one of the similarity measures and don't 
 
 --no_constraints: It won't use the extra constraints in advance. All the results in the papers are WITH the additional constraints.
 
-**Step 5**: (Optional) The above code might take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features. If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with useSims=1, because this option can't be turned on in this step otherwise.
+For more options, please take a look at constants/flags.py.
 
-    cp feats/feats_global_graphs.txt 
+**Step 5**: (Optional) The above code might take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features (e.g., see feats/feats_global_graphs.txt). If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx, --test instead of --dev), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with useSims=1, because this option can't be turned on in this step otherwise.
+
+First copy the extracted similarity features.
+
+    cp feats/feats_global_graphs.txt
+
+Then, run the below code.
+
     python eval.py --featsFile feats_global_graphs --dev --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
 
---featsFile: 
+--featsFile feats_global_graphs: The name of the file that contains extracted similarity measures of the datasets.
