@@ -74,4 +74,6 @@ Then, run the below code.
 
     python eval.py --featsFile feats_global_graphs --dev --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
 
+There is only one new parameter:
+
 --featsFile feats_global_graphs: The name of the file that contains extracted similarity measures of the datasets.
