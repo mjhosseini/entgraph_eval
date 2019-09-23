@@ -1,4 +1,4 @@
-This is the evaluation code on the entailment datasets for the following paper:
+This is the evaluation code on the entailment datasets for the following papers:
 
 Learning Typed Entailment Graphs with Global Soft Constraints, Mohammad Javad Hosseini, Nathanael Chambers, Siva Reddy, Xavier Holt, Shay B. Cohen, Mark Johnson, and Mark Steedman. Transactions of the Association for Computational Linguistics (TACL 2018).
 
