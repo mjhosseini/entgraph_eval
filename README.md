@@ -17,9 +17,17 @@ Please follow the below instructions to create entailment graphs and/or replicat
     unzip gfiles.zip
     rm gfiles.zip
 
-**Step 2**: Download (and decompress) lib, lib_data and data folders inside the entGraph folder.
+**Step 2**: Add the learned entailment graphs folder inside the gfiles folder. You can also download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
 
-**Step 3**: Compile the Java files. In this step, it's assumed a remote machine (server) is used to run the code and a local machine (PC or laptop) is used to compile the code. One way would be to create a project using eclipse in the local machine. To do so, change the workspce directory to the folder containing entGraph. Then, create a project named entGraph (File -> New -> Java Project). From step 2, only the lib folder is needed for compilation. Then, the automatically created bin folder needs to be copied to the server that the code will be executed on. The rest will be done on the remote machine.
+**Step 3**:
+
+    pip3 install numpy
+    pip3 install scipy
+    pip3 install nltk
+    python -m nltk.downloader wordnet
+    python -m nltk.downloader verbnet
+    python -m nltk.downloader stopwords
+    pip3 install sklearn
 
 **Step 4**: You can simply download the linked and parsed NewsSpike corpus (NewsSpike_CCG_parsed.tar.gz) to your preferred location and skip to step 5. For more information on the parsing format, please see parsing_readme.txt. Alternatively, follow steps 4.1 to 4.5 to parse and link the NewsSpike corpus (or your own corpus) into predicate argument structure using the graph-parser (developped by Siva Reddy) based on CCG parser (easyCCG).
 
