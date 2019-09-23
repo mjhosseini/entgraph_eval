@@ -64,7 +64,7 @@ Other parameters that should mainly remain unchanged:
 
 For more options, please take a look at constants/flags.py.
 
-**Step 5**: (Optional) The above code will take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features (e.g., see feats/feats_global_graphs.txt). If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx, or --test instead of --dev), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with useSims=1, because this option can't be turned on in this step otherwise.
+**Step 5**: (Optional) The above code will take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features (e.g., see feats/feats_global_graphs.txt). If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx, or --test instead of --dev), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with --useSims 1, because this option can't be turned on in this step otherwise.
 
 First copy the extracted similarity features.
 
