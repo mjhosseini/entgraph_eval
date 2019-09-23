@@ -56,7 +56,7 @@ Other parameters that should mainly remain unchanged:
 
 --useSims 0: If we set this to 1, the code will look into other relations that have high similarity measures to the relations of interest in GloVe embedding space. We did not use this option in the above papers, but using it will improve the results slightly. If you're interested in testing other embedding spaces, you can do that by providing a file in the format of gfiles/ent/ccg.sim.
 
-oneFeat=1: This means that we only use one of the similarity measures and don't combine them in any way.
+--oneFeat 1: This means that we only use one of the similarity measures and don't combine them in any way.
 
 --no_lemma_baseline: It won't run the lemma_baseline in advance. All the results in the papers are WITH the lemma baseline.
 
