@@ -68,7 +68,7 @@ For more options, please take a look at constants/flags.py.
 
 First copy the extracted similarity features.
 
-    cp feats/feats_global_graphs.txt
+    cp feats/feats_global_graphs.txt ../../gfiles/ent/
 
 Then, run the below code.
 
