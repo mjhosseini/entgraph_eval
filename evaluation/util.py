@@ -256,7 +256,7 @@ def get_auc(precisions, recalls):
     xs = []
     ys = []
     for i, p in enumerate(precisions):
-        if p >= .4:
+        if p >= .5:
             xs.append(recalls[i])
             ys.append(p)
 

@@ -1011,8 +1011,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
 
     auc = auc_fpr_tpr
 
-    if args.write:
-        op_pr_rec.write("auc: "+str(auc)+"\n")
+
 
     if debug:
         print ("tpr, fpr: ")
@@ -1027,7 +1026,13 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         print ("num seen: ", len(Y_dev_seen), " vs ", len(Y_dev))
 
     (precision, recall, thresholds) = precision_recall_curve(Y_dev, Y_dev_pred)
-    # print "main_auc:", util.get_auc(precision[:-1],recall[:-1])
+    main_auc = evaluation.util.get_auc(precision[:-1],recall[:-1])
+
+    if args.write:
+        op_pr_rec.write("auc: "+str(main_auc)+"\n")
+
+    if debug:
+        print ("main_auc:", main_auc)
     for i in range(len(Y_dev)):
         y_pred = Y_dev_pred[i]
         if y_pred==True:
@@ -1473,7 +1478,6 @@ if args.calcSupScores:
     files = list(np.sort(files))
     num_f = 0
     for f in files:
-
 
         if num_f % 50 == 0:
             print ("num processed files: ", num_f)

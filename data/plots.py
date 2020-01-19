@@ -156,7 +156,7 @@ def get_color_by_idx(idx):
 
 
 
-root = "../../gfiles/results/test/ablation/hier/"
+root = "../../gfiles/results/dev/boxemb/"
 
 
 if args:
@@ -214,8 +214,9 @@ for fname in fnames:
             best_pr = pr
             best_rec = rec
 
-        x2s.append(rec)
-        y2s.append(pr)
+        if pr > .5 and i != len(lines) - 1:
+            x2s.append(rec)
+            y2s.append(pr)
 
 
         if len(lines)<30 or i%mod==0 or i==1 or (pr>.7 and i%(mod/2)==0) or (pr>.8 and i%(mod/3)==0) or (pr>.8 and i%(mod/4)==0) or i>len(lines)-3:
@@ -254,7 +255,7 @@ for fname in fnames:
     if len(xs)==1:
         ms = 8
     if len(xs)>1:
-        plt.plot(x2s, y2s, color, label =label, marker=marker, linewidth=1, ms = ms)
+        plt.plot(xs, ys, color, label =label, marker=marker, linewidth=1, ms = ms)
     else:
         plt.plot(xs[0], ys[0], color, label=label, marker=marker, ms=ms,linewidth=1,linestyle="None")
 
