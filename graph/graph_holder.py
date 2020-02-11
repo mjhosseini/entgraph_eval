@@ -15,7 +15,7 @@ class GHolder:
         tnf = SCCGraph(pgraph, lmbda, gLines, lIdx)
         self.TNFs.append(tnf)
         self.lIdx = tnf.lIdx
-        print "lidx: ", self.lIdx
+        # print "lidx: ", self.lIdx
         self.pred2Node = tnf.pred2Node
 
         N = len(tnf.node2sccIdx)
@@ -33,7 +33,7 @@ class GHolder:
 
     def write(self):
         for idx,tnf in enumerate(self.TNFs):
-            print "subgraph #", idx
+            print ("subgraph #", idx)
             tnf.write_SCC()
 
 

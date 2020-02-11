@@ -318,6 +318,7 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
     predPairc_DS = []
     predPaircTyped_DS = []
     predPairc_Pos_DS = []
+    lmbdas = None
 
     for data in data_list:
         (predCDS_, predPairsCDS_, predPairsTypedCDS_, predPairsC_Pos_DS_) = evaluation.util.getPredPairs(data)
@@ -434,6 +435,7 @@ def form_samples(fnames,fnames_unary,orig_fnames,engG_dir_addr,fname_feats=None,
                 gholders.append(gholder)
 
             if lmbdas is None:
+
                 lmbdas = []
                 for gholder in gholders:
                     lmbdas.append(gholder.TNFs[0].lmbda)
@@ -682,6 +684,8 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                     f_idx = graph.Graph.num_feats + graph.Graph.featIdx
                 if args.rankFeats:
                     f_idx += graph.Graph.num_feats//2
+                    if debug:
+                        print ('new feat idx for rank: ', f_idx)
             else:
                 if args.useSims:
                     f_idx = 2
@@ -713,6 +717,7 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
 
                         if l==0:#In practice, if it's zero, it's zero for everything!!! I tested this!
                             l = Y_dev_pred_backup[i]
+
                         Y_dev_pred2.append(l)
 
                     Y_dev_pred = Y_dev_pred2
@@ -1026,7 +1031,10 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         print ("num seen: ", len(Y_dev_seen), " vs ", len(Y_dev))
 
     (precision, recall, thresholds) = precision_recall_curve(Y_dev, Y_dev_pred)
-    main_auc = evaluation.util.get_auc(precision[:-1],recall[:-1])
+    try:
+        main_auc = evaluation.util.get_auc(precision[:-1], recall[:-1])
+    except:
+        main_auc = 0
 
     if args.write:
         op_pr_rec.write("auc: "+str(main_auc)+"\n")
@@ -1113,7 +1121,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
                     conf_l = "TN"
 
 
-                print (conf_l, ":", lines_dev[idx])
+                print (conf_l + " : " + lines_dev[idx])
                 print ("pred: ", Y_dev_pred[idx])
                 if predPairFeats:
                     predPair = p+"#"+q+"#"+str(a)
@@ -1234,7 +1242,8 @@ args = opts(sysargs)
 
 debug = qa_utils.debug = baseline.debug = evaluation.util.debug = predict.debug = berant.debug = args.debug
 if args.tnf:
-    graph.graph_holder.debug = graph.sccGraph.debug = graph.gt_Graph.debug = debug
+    from graph import graph_holder, gt_Graph, sccGraph
+    graph_holder.debug = sccGraph.debug = gt_Graph.debug = debug
 
 if args.outDir:
     out_dir = args.outDir+"/"
@@ -1539,20 +1548,14 @@ elif not args.snli:
             print ("pr rec TNF Typed: ")
         for i in range(len(Y_dev_TNF_typed0)):
 
-            if args.tnf_avg:
-                if debug:
-                    print ("TNF typed pr_rec:")
-                    write_detailed_res(data_dev,lines_dev,Y_dev,Y_dev_TNF_typed0[i], Y_berant)
+            if debug:
+                print ("typed ", i)
 
-            else:
-                if debug:
-                    print ("typed ", i)
+            Y_dev_pred_binary = Y_dev_TNF_typed0[i]
+            if debug:
+                write_detailed_res_binary(data_dev,lines_dev,Y_dev,Y_dev_pred_binary,Y_dev_pred_binary, Y_berant)
 
-                Y_dev_pred_binary = Y_dev_TNF_typed0[i]
-                if debug:
-                    write_detailed_res_binary(data_dev,lines_dev,Y_dev,Y_dev_pred_binary,Y_dev_pred_binary, Y_berant)
-
-                pr, rec, _ = eval(Y_dev_TNF_typed0[i],Y_dev)
-                op_pr_rec_TNF_typed.write(str(pr)+"\t"+str(rec)+"\n")
-                if debug:
-                    print (pr, " ", rec)
+            pr, rec, _ = eval(Y_dev_TNF_typed0[i],Y_dev)
+            op_pr_rec_TNF_typed.write(str(pr)+"\t"+str(rec)+"\n")
+            if debug:
+                print (pr, " ", rec)
