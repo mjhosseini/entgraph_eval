@@ -45,6 +45,8 @@ def opts(actual_args=None):
     boolflag("test_naacl", "on naacl's data")
     boolflag("test_naacl_untensed", "on naacl's data, untensed parse")
     boolflag("zeichner", "on zeichner's data")
+    boolflag("dev_sherliic_v2", "on sherliic's data dev portion, v2 rels")
+    boolflag("test_sherliic_v2", "on sherliic's data test portion, v2 rels")
     boolflag("snli", "extracts feats for snli ds")
     boolflag("instance_level", "vs typed pred-pair level that we usually do.")#Useful for glove embedding or other embedding predictions
 

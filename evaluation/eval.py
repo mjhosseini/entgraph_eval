@@ -904,10 +904,10 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         print ("berant dev2 eval:")
         eval(Y_dev_berant2,Y_dev)
 
-        print ("ppdb_xl dev eval:")
+        print ("ppdb_xl dev eval (valid only for levy or berant):")
         eval(Y_dev_ppdb_xl, Y_dev)
 
-        print ("ppdb_xxxl dev eval:")
+        print ("ppdb_xxxl dev eval (valid only for levy or berant):")
         eval(Y_dev_ppdb_xxxl, Y_dev)
 
         print ("analyze ppdb")
@@ -1298,6 +1298,14 @@ elif args.berDS_v2:
 elif args.berDS_v3:
     fnames_CCG = [root + "ent/all_comb_rels_v3.txt", root + "ent/ber_all_rels_v3.txt"]
     orig_fnames = [root + "ent/all_comb.txt", root + "ent/ber_all.txt"]
+
+elif args.dev_sherliic_v2:
+    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/dev_sherliic_rels_v2.txt"]
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_sherliic.txt"]
+
+elif args.test_sherliic_v2:
+    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/test_sherliic_rels_v2.txt"]
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_sherliic.txt"]
 
 elif args.snli:
     # fnames_CCG = [root + "ent/msnli_rels2.txt", root + "ent/msnli_rels2.txt"]

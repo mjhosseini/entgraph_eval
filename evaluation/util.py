@@ -549,7 +549,6 @@ def read_cos_feats(fname_cos_feats):
         ss = [np.float(s) for s in ss]
         ret.append(ss)
     return ret
-    return ret
 
 def addPred(p, predCounts):
     if p not in predCounts:
