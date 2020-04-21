@@ -189,7 +189,7 @@ class Graph:
 
                     order += 1
 
-                    if self.args.maxRank and order>args.maxRank:
+                    if self.args.maxRank and order>self.args.maxRank:
                         continue
 
                     if nPred not in self.pred2Node:

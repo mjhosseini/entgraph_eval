@@ -887,6 +887,8 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
     print ("lemma baseilne eval:")
     eval(Y_dev_base,Y_dev)
 
+    # f_out_predpair_seen = open('predpair_seen.txt', 'w')
+
     if orig_fnames[1]:
 
         if not args.berDS and not args.berDS_v2 and not args.berDS_v3:
@@ -953,6 +955,10 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         predPair = p_ccg+"#"+q_ccg+"#"+str(a_ccg)
         if predPairSumCoefs:
             predPairSeen = (predPair in predPairSumCoefs and predPairSumCoefs[predPair] > 0)
+            # if predPairSeen:
+            #     f_out_predpair_seen.write('1\n')
+            # else:
+            #     f_out_predpair_seen.write('0\n')
             if debug:
                 print ("is seen: ", predPair, predPairSeen)
             if predPairSeen:
@@ -1240,7 +1246,7 @@ root = "../../gfiles/"
 sysargs = sys.argv[1:]
 args = opts(sysargs)
 
-debug = qa_utils.debug = baseline.debug = evaluation.util.debug = predict.debug = berant.debug = args.debug
+debug = graph.debug = qa_utils.debug = baseline.debug = evaluation.util.debug = predict.debug = berant.debug = args.debug
 if args.tnf:
     from graph import graph_holder, gt_Graph, sccGraph
     graph_holder.debug = sccGraph.debug = gt_Graph.debug = debug
@@ -1344,12 +1350,12 @@ elif args.test_v3:
     orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
 
 elif args.test_dir:
-    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_dir_rels.txt"]
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_dir_rels_v2.txt"]
     fnames_oie = None
     orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_dir.txt"]
 
 elif args.dev_dir:
-    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev_dir_rels.txt"]
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev_dir_rels_v2.txt"]
     fnames_oie = None
     orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_dir.txt"]
 
@@ -1445,7 +1451,7 @@ rels2Sims = evaluation.util.read_rels_sim(sim_path, CCG, useSims)
 
 
 #Form the samples (dev will contain the test if you use --test instead of --dev
-[Y_train_base, Y_dev_base] = [baseline.predict_lemma_baseline(fname) for fname in orig_fnames]
+[_, Y_dev_base] = [baseline.predict_lemma_baseline(fname, args) for fname in orig_fnames]
 
 #Do the training and prediction!
 
