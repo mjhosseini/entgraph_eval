@@ -38,6 +38,8 @@ The code outputs a file called gfiles/results/pr_rec/method_name.txt (e.g., gfil
 
 The main parameters are these ones:
 
+--gpath: The folder containing entailment graphs, which should be put inside gfiles folder.
+
 --sim_suffix: The suffix of the entailment graph files, e.g., _gsim.txt.
 
 -- featIdx 1: There are usually more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder). This index specifies which similarity measure should be used.
