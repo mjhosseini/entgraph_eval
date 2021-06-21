@@ -42,7 +42,7 @@ The main parameters are these ones:
 
 --sim_suffix: The suffix of the entailment graph files, e.g., _gsim.txt.
 
--- featIdx 1: There are usually more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder). This index specifies which similarity measure should be used.
+-- featIdx 1: There are usually more than one similarity measures in the entailment graph files (e.g., local similarity and global similarity in the global_scores folder). This index specifies which similarity measure should be used. For "global_scores", 0 means local and 1 means global.
 
 --exactType --backupAvg: If you add these two options together, the code first tries to use the similarity measure of the graph with the same types as the entailment query. For example, for (PERSON visit LOCATION) => (PERSON arrive in LOCATION), it will use the similarity measure for the (PERSON,LOCATION) graph. If that graph doesn't have the relations of interest (visit or arrive in), then the code looks at the uniform average of the scores for those relations across all graphs (the main results with global similarities in the papers). If only --exactType is used, then the similarity will be 0 if the graph doesn't have the relations of interest (the local results in the papers). Finally, if none of these options are used, the code always uses the uniform avarage of the similarity scores across all graphs (the avg results in the first paper).
 
