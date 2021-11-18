@@ -33,8 +33,9 @@ Please follow the below instructions to create entailment graphs and/or replicat
 
     cd entgraph_eval/evaluation/
     python eval.py --gpath global_graphs --dev --sim_suffix _gsim.txt --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
+    python eval.py --gpath global_graphs --dev --sim_suffix _gsim.txt --method local_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 0 --exactType --write
     
-The code outputs a file called gfiles/results/pr_rec/method_name.txt (e.g., gfiles/results/pr_rec/global_scores.txt). This file contains the precisions and recalls that are obtained by changing a threshold on the entailment scores. It also contains the area under precision-recall curve (for precision>=.5). The code also writes the precisions and recalls of a few baselines as well as the precision and recall for the entailment graphs at precision~0.75.
+The code outputs a file called gfiles/results/pr_rec/method_name.txt (e.g., gfiles/results/pr_rec/global_scores.txt or gfiles/results/pr_rec/local_scores.txt). This file contains the precisions and recalls that are obtained by changing a threshold on the entailment scores. It also contains the area under precision-recall curve (for precision>=.5). The code also writes the precisions and recalls of a few baselines as well as the precision and recall for the entailment graphs at precision~0.75.
 
 The main parameters are these ones:
 
