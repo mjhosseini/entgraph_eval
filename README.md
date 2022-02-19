@@ -27,7 +27,7 @@ Please note:
 
 1) The *_rels.txt files contain the extracted CCG triples while the other ones are the original triples.
 
-2) In all these files, the format is: "hypothesis_triple[TAB]premise_triple[TAB]label". Note that the first triple is the hypothesis triple (not the premise) which is based on the format in Levy and Dagan (2016) dataset paper (Inference in Context via Question Answerin).
+2) In all these files, the format is: "hypothesis_triple[TAB]premise_triple[TAB]label". Note that the first triple is the hypothesis triple (not the premise) which is based on the format in Levy and Dagan (2016) dataset paper (Inference in Context via Question Answering, ACL 2016).
 
 3) We performed the split of the Levy/Holt's dataset as explained in Section 5.2 of the TACL 2018 paper. We use the dev set for hyper-parameter tuning.
 
