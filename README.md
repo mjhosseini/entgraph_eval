@@ -25,13 +25,13 @@ Berant's dataset: ber_all.txt and ber_all_rels.txt
 
 Please note:
 
-1) The *_rels.txt files contain the extracted CCG triples.
+1) The *_rels.txt files contain the extracted CCG triples while the other ones are the original triples.
 
 2) In all these files, the format is: "hypothesis_triple[TAB]premise_triple[TAB]label". Note that the first triple is the hypothesis triple (not the premise) which is based on the format in Levy and Dagan (2016) dataset paper (Inference in Context via Question Answerin).
 
 3) We performed the split of the Levy/Holt's dataset as explained in Section 5.2 of the TACL 2018 paper. We use the dev set for hyper-parameter tuning.
 
-4) The rest of the files in gfiles/ent (e.g., all_*) are for faster evaluation (relevant to Step 5 below). 
+4) The rest of the files in gfiles/ent (e.g., all_*) are for faster evaluation (relevant to Step 5 below).
 
 **Step 2**: Add the learned entailment graphs folder inside the gfiles folder. You can also download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
 
