@@ -19,11 +19,11 @@ Please follow the below instructions to create entailment graphs and/or replicat
 
 ***The datasets can be found in the following files inside the folder 'gfiles/ent':***
 
-Levy/Holt's dev set: dev.txt and dev_rels.txt
+A) Levy/Holt's dev set: dev.txt and dev_rels.txt
 
-Levy/Holt's test set: test.txt and test_rels.txt
+B) Levy/Holt's test set: test.txt and test_rels.txt
 
-Berant's dataset: ber_all.txt and ber_all_rels.txt
+C) Berant's dataset: ber_all.txt and ber_all_rels.txt
 
 Please note:
 
