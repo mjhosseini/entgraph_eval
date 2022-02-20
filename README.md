@@ -38,7 +38,7 @@ Please note:
 ### Step 2: Add the learned entailment graphs folder inside the gfiles folder.
 You can download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
 
-**Step 3**: Install dependencies (if required)
+### Step 3: Install dependencies (if required)
 
     pip install numpy
     pip install scipy
