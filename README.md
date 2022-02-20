@@ -6,18 +6,18 @@ Duality of Link Prediction and Entailment Graph Induction,  Mohammad Javad Hosse
 
 
 
-### How to Run the Code
+## How to Run the Code
 
 Please follow the below instructions to create entailment graphs and/or replicate the paper's experiments.
 
-**Step 1**: Clone the entgraph_eval project and download necessary files.
+### Step 1: Clone the entgraph_eval project and download necessary files.
 
     git clone https://github.com/mjhosseini/entgraph_eval.git
     wget https://dl.dropboxusercontent.com/s/j7sgqhp8a27qgcf/gfiles.zip
     unzip gfiles.zip
     rm gfiles.zip
 
-*The datasets can be found in the following files inside the folder 'gfiles/ent':*
+***The datasets can be found in the following files inside the folder 'gfiles/ent':***
 
 Levy/Holt's dev set: dev.txt dev_rels.txt
 Levy/Holt's test set: test.txt and test_rels.txt
@@ -33,7 +33,7 @@ Please note:
 
 4) The rest of the files in gfiles/ent (e.g., all_*) are for faster evaluation (relevant to Step 5 below).
 
-**Step 2**: Add the learned entailment graphs folder inside the gfiles folder. You can also download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
+### Step 2: Add the learned entailment graphs folder inside the gfiles folder. You can also download and unzip learned global_graphs from https://worksheets.codalab.org/worksheets/0x8684ad8e95e24c4d80074278bce37ba4.
 
 **Step 3**: Install dependencies (if required)
 
@@ -45,7 +45,7 @@ Please note:
     python -m nltk.downloader stopwords
     pip install sklearn
 
-**Step 4**: Run the evaluation script.
+### Step 4: Run the evaluation script.
 
     cd entgraph_eval/evaluation/
     python eval.py --gpath global_graphs --dev --sim_suffix _gsim.txt --method global_scores --CCG 1 --typed 1 --supervised 0 --oneFeat 1 --useSims 0 --featIdx 1 --exactType --backupAvg --write
@@ -85,7 +85,7 @@ Other parameters that should mainly remain unchanged:
 
 For more options, please take a look at constants/flags.py.
 
-**Step 5**: (Optional) The above code will take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features (e.g., see feats/feats_global_scores.txt). If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx, or --test instead of --dev), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with --useSims 1, because otherwise this option can't be turned on in this step.
+### Step 5: (Optional) The above code will take a few hours to run. The reason is that for the provided entailment datasets, it will look into all the entailment graphs to extract the relevant similarity features (e.g., see feats/feats_global_scores.txt). If you run the code once on some entailment graphs and are interested in changing some of the options (e.g., the featIdx, or --test instead of --dev), you don't need to run the whole code again. You can simply run the script below, which only uses the extracted similarity measures for those entailment datasets. This code just takes a few minutes to complete. In that case, it's suggested to run step 4 with --useSims 1, because otherwise this option can't be turned on in this step.
 
 First copy the extracted similarity features.
 
