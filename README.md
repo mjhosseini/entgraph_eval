@@ -17,7 +17,7 @@ Please follow the below instructions to create entailment graphs and/or replicat
     unzip gfiles.zip
     rm gfiles.zip
 
-*The datasets can be found in the following file inside the folder 'gfiles/ent':*
+*The datasets can be found in the following files inside the folder 'gfiles/ent':*
 
 Levy/Holt's dev set: dev.txt dev_rels.txt
 Levy/Holt's test set: test.txt and test_rels.txt
