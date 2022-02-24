@@ -10,10 +10,6 @@ def opts(actual_args=None):
 
     def flag(name, description, ftype=str, **kwargs):
         opts.add_argument(('--' if len(name)>1 else '-')+name, type=ftype, help=description, **kwargs)
-    def inflag(name, description, ftype=argparse.FileType('r'), **kwargs):
-        flag(name, description, ftype=ftype, **kwargs)
-    def outflag(name, description, ftype=argparse.FileType('w'), **kwargs):
-        flag(name, description, ftype=ftype, **kwargs)
     def boolflag(name, description, default=False, **kwargs):
         opts.add_argument(('--' if len(name)>1 else '-')+name, action='store_false' if default else 'store_true', help=description, **kwargs)
 
