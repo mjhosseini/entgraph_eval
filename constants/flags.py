@@ -10,12 +10,10 @@ def opts(actual_args=None):
 
     def flag(name, description, ftype=str, **kwargs):
         opts.add_argument(('--' if len(name)>1 else '-')+name, type=ftype, help=description, **kwargs)
-    def inflag(name, description, ftype=argparse.FileType('r'), **kwargs):
-        flag(name, description, ftype=ftype, **kwargs)
-    def outflag(name, description, ftype=argparse.FileType('w'), **kwargs):
-        flag(name, description, ftype=ftype, **kwargs)
     def boolflag(name, description, default=False, **kwargs):
         opts.add_argument(('--' if len(name)>1 else '-')+name, action='store_false' if default else 'store_true', help=description, **kwargs)
+
+    flag("eval_range", "full/nosame/google_PLM", default='full')
 
     boolflag("write", "whether we should write pr_rec, auc and tp_fp")
     boolflag("no_lemma_baseline", "should we ignore lemma_baseline?")
@@ -36,10 +34,16 @@ def opts(actual_args=None):
     boolflag("backupAvg", "backup to average for out of graph predicates")
     boolflag("dev", "only on dev data")
     boolflag("test", "on test data")
+    boolflag("dev_bt", "on dev backtranslated data")
+    boolflag("test_bt", "on test backtranslated data")
     boolflag("dev_v2", "only on dev data, version 2")#version 2 built on 04/04/2019
     boolflag("test_v2", "on test data, version 2")#version 2 built on 04/04/2019
     boolflag("dev_v3", "only on dev data, version 2")  # version 2 built on 04/04/2019
     boolflag("test_v3", "on test data, version 2")  # version 2 built on 04/04/2019
+    boolflag("dev_str_pref", "dev data with predstr predicates, sensitive to prefix")
+    boolflag("dev_str_nopref", "dev data with predstr predicates, insensitive to prefix")
+    boolflag("test_str_pref", "test data with predstr predicates, sensitive to prefix")
+    boolflag("test_str_nopref", "test data with predstr predicates, insensitive to prefix")
     boolflag("dev_dir", "on dev_dir data")
     boolflag("test_dir", "on test_dir data")
     boolflag("test_naacl", "on naacl's data")
@@ -67,7 +71,17 @@ def opts(actual_args=None):
     flag("sim_suffix", "similarity files suffix", ftype=str)
     boolflag("debug", "writing debug info")
 
+    flag("typed_mapping_fn", "file name to the mapping between typed triples and levy/holt's entries", ftype=str, default='')
+    flag("untyped_mapping_fn", "File name to the mapping between untyped triples and levy/holt's entries", ftype=str, default='')
+    boolflag("max_pooling", "whether to use max pooling for mapping multiple typed triples.")
+    boolflag("avg_pooling", "whether to use avg pooling for mapping multiple typed triples.")
+    boolflag("no_lemma", "only exact baseline.")
+    boolflag("use_untyped_mapping", "whether to use untyped mapping between triples and levy/holt's entries.")
+
     boolflag("LDA", "full distributional LDA probabilities for types")  # deprecated
+
+    flag("qaeval_version", "qaeval_version", ftype=str, default='15_30_triple_doc_disjoint_1400000_2_lexic_wordnet')
+    flag("exact_found_fn", "exact_found_fn", ftype=str, default='../gfiles/')
 
     args = opts.parse_args(actual_args)
     return args

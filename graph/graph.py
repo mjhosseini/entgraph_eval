@@ -9,6 +9,7 @@ class Graph:
 
     num_feats = -1
     zeroFeats = None
+    certainFeats = None
     num_edges = 0
     num_edges_threshold = 0#cos >1e-4
     threshold = -1
@@ -31,7 +32,7 @@ class Graph:
 
     def set_num_feats(self,gpath):
         #get the first pred
-        f = open(gpath)
+        f = open(gpath, encoding='utf-8')
         if debug:
             print ("gpath: ", gpath)
 
@@ -48,6 +49,8 @@ class Graph:
                 if seen_preds==2:
                     Graph.num_feats = 2*num_feats#half if for rank
                     Graph.zeroFeats = np.zeros(shape=Graph.num_feats)
+                    Graph.certainFeats = np.repeat(0.99902344, Graph.num_feats)
+                    Graph.certainFeats = np.around(Graph.certainFeats, decimals=4)
                     break
             if line.endswith("sims") or line.endswith("sim"):
                 num_feats += 1
@@ -60,7 +63,7 @@ class Graph:
             self.set_num_feats(gpath)
         if self.args and self.args.threshold:
             Graph.threshold = self.args.threshold
-        f = open(gpath)
+        f = open(gpath, encoding='utf-8')
         Graph.featIdx = 0 if self.args and self.args.saveMemory else Graph.featIdx
         self.pred2Node = {}#This should be mainly because we read from file, in other inits, we don't need it!
         self.idx2Node = {}
@@ -113,14 +116,14 @@ class Graph:
                 print ("all size: ", allSize)
 
             lIdx += 1
-            if first:
+            if first:  # such as: types: art#art, num preds: 129
                 self.name = line
                 self.types = line.split(",")[0].split(" ")[1].split("#")
-                if len(self.types)<2:
+                if len(self.types) < 2:
                     self.types = line.split(" ")[0].split("#")
-
+                    # raise AssertionError
                 if len(self.types) == 2:
-                    if self.types[0]==self.types[1]:
+                    if self.types[0] == self.types[1]:
                         self.types[0] += "_1"
                         self.types[1] += "_2"
 
@@ -129,11 +132,10 @@ class Graph:
             elif line == "":
                 continue
 
-            elif line.startswith("predicate:"):
+            elif line.startswith("predicate:"):  # such as: "predicate: (成为.1, 成为.2)#art_1#art_2"
                 #time to read a predicate
                 pred = line[11:]
-
-                if (self.args.CCG and Graph.is_conjunction(pred)):
+                if self.args.CCG and Graph.is_conjunction(pred):
                     isConj = True
                     continue
                 else:
@@ -141,13 +143,10 @@ class Graph:
 
                 #The node
                 if pred not in self.pred2Node:
-
                     nIdx = len(self.nodes)
                     #print "nIdx: ", nIdx
                     node = Node(pred,nIdx)
                     self.insertNode(node)
-
-
                 node = self.pred2Node[pred]
 
                 if not self.args or not self.args.saveMemory:
@@ -158,29 +157,29 @@ class Graph:
                 sim_name = "none"
 
             else:
-                if (self.args.CCG and isConj):
+                if self.args.CCG and isConj:
                     # print "isConj"
                     continue
-                if "num neighbors" in line:
+                if "num neighbors" in line:  # such as "num neighbors: 22"
                     continue
                 #This means we have #cos sim, etc
                 if line.endswith("sims") or line.endswith("sim"):
-                    order = 0
+                    order = 0  # number of out edges for this predicate
                     if not self.args or not self.args.saveMemory:
                         feat_idx += 1
                     sim_name = line.lower()
                     # print ("line was: ", line)
                     #cos: 0, lin's prob: 1, etc
 
-                else:
+                else:  # the actual lines of similarity scores, such as: (记录.1,记录.2)#art_1#art_2 0.23808833179205025
                     #Now, we've got sth interesting!
-
-                    if self.args and self.args.saveMemory and not "binc" in sim_name:
+                    if self.args and self.args.saveMemory and not "binc" in sim_name:  # only calculate BInc in saveMemory mode -- Teddy
                         continue
 
                     try:
                         ss = line.split(" ")
-                        nPred = ss[0]
+                        assert len(ss) == 2
+                        nPred = ss[0]  # name of predicate
                         if self.args.CCG and Graph.is_conjunction(nPred):
                             continue
                         sim = ss[1]
@@ -189,10 +188,10 @@ class Graph:
 
                     order += 1
 
-                    if self.args.maxRank and order>self.args.maxRank:
+                    if self.args.maxRank and order>self.args.maxRank:  # if number of edges exceeds threshold (if specified) -- Teddy
                         continue
 
-                    if nPred not in self.pred2Node:
+                    if nPred not in self.pred2Node:  # the target predicate node.
                         nIdx = len(self.nodes)
                         nNode = Node(nPred,nIdx)
                         self.insertNode(nNode)
@@ -202,7 +201,6 @@ class Graph:
                     node.addNeighbor(nNode)
                     # print "adding: ", sim, " ", line, " ", pred, " ", nPred
                     node.add_sim(nNode,sim,feat_idx,order)
-
 
         f.close()
         if debug:
@@ -218,11 +216,12 @@ class Graph:
             if "__" in node.id:
                 return
 
+            # (pred.1, pred.2)#type_1#type_2
             ss = node.id.replace("_1", "").replace("_2", "").split("#")
-            unaries = ss[0][1:-1].split(",")
+            unaries = ss[0][1:-1].split(",") # [pred.1, pred.2]
 
-            thisType0 = ss[1]
-            thisType1 = ss[2]
+            thisType0 = ss[1] # type
+            thisType1 = ss[2] # type
             unaries[0] += "#"+ thisType0
             unaries[1] += "#"+ thisType1
 
@@ -309,7 +308,7 @@ class Graph:
             return None
 
         elif p==q:
-            return np.ones(shape=(Graph.num_feats))
+            return Graph.certainFeats
         else:
             node1 = self.pred2Node[p]
             node2 = self.pred2Node[q]
@@ -439,18 +438,15 @@ class Node:
         val2 = self.oedges[halfIdx].sims[2]+Node.eps/2
         val2 = min(val2,1)
         val3 = self.oedges[0].sims[2]+Node.eps
-        val3 - min(val3,1)
+        val3 = min(val3,1)
         x = [0,val2,val3]
         y = [Node.minp,.5,Node.maxp]
         f = interpolate.interp1d(x, y,kind='quadratic')
         return f
 
-
-
     #NotUsed
     def set_label(self,l):
         self.l = l
-
 
     def __str__(self):
         ret = ""
@@ -467,7 +463,7 @@ class OEdge:
     def __init__(self,idx,sims=None,orders=None,p=-1,w=-1):
         self.idx = idx
         if sims is None:
-            self.sims = np.zeros(shape=(Graph.num_feats//2))
+            self.sims = np.zeros(shape=(Graph.num_feats//2))  # why?
             self.orders = np.zeros(shape=(Graph.num_feats//2))
             #To be set in setWPs
             self.p = -1
@@ -479,8 +475,6 @@ class OEdge:
             self.w = w
 
     def add_sim(self,sim, idx,order):
-
-
         if ")" in sim or "_" in sim:
             return
         try:

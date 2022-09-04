@@ -8,7 +8,7 @@ args = sys.argv[1:]
 aucs = []
 
 def auc_exact_below(xs,ys):
-    ret = 0;
+    ret = 0
     sortIdx = np.argsort(xs)
     print sortIdx
     xs = [xs[i] for i in sortIdx]
@@ -17,7 +17,7 @@ def auc_exact_below(xs,ys):
     for i in range(1,len(xs)):
         dx = xs[i]-xs[i-1]
         y = (ys[i]+ys[i-1])/2
-        ret += (dx*y);
+        ret += (dx*y)
     return ret
 
 def get_color(method_name,idx):

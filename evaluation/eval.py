@@ -14,6 +14,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn import metrics
 from constants.flags import opts
 from ppdb import predict
+import json
 
 np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(linewidth=np.nan)
@@ -61,7 +62,7 @@ def equalType(p1,t1,t2):
 def add_feats_for_predPair(gr,p,q,a,t1,t2,p1,q1, p1s, q1s, predPairCounts, predPairSumCoefs, predPairSimSumCoefs, predPairFeats,predPairTypedExactFound,is_typed):
 
     feats = gr.get_features(p1,q1)
-    feats_sim = get_sum_simlar_feats(gr,p1s,q1s)
+    feats_sim = get_sum_simlar_feats(gr,p1s,q1s)  # most probably, p1s and q1s contain only one predicate, and this returns the same as feats.
 
     #This is for numNodes: num p, num q, num nodes
 
@@ -71,7 +72,7 @@ def add_feats_for_predPair(gr,p,q,a,t1,t2,p1,q1, p1s, q1s, predPairCounts, predP
             print ("feats:", feats)
             print ("feats_sim:", feats_sim)
         if feats is None:
-            no_exact_feats = True
+            no_exact_feats = True  # means: feats is None, and feats_sim is not None.
             feats = np.zeros(graph.Graph.num_feats)
 
         if is_typed:
@@ -153,7 +154,7 @@ def add_connectivity_for_predPair(gr,p,q,p1,q1,a,t1,t2,gholders,is_typed,predPai
 
 
 def add_feats_for_unaryPair(gr, u, v, u1,v1, t, unaryPairFeats, unaryPairSumCoefs):
-    feats_unary, coef1 = gr.get_features_unary(u1,v1)
+    feats_unary, coef1 = gr.get_features_unary(u1,v1)  # weighted average of all predicate pairs containing these halves of predicates (pred1.1) / (pred2.to.2)
 
     if feats_unary is not None:
 
@@ -186,7 +187,7 @@ def form_samples_gr(gr, data, data_unary, predCounts, predPairCounts, predPairSu
         p1s = [pp + "#" + types[0] + "#" + types[1] for pp in ps]
         p2s = [pp + "#" + types[1] + "#" + types[0] for pp in ps]
 
-        if a:
+        if a:  # if arguments are aligned.
             q1 = q + "#" + types[0] + "#" + types[1]
             q2 = q + "#" + types[1] + "#" + types[0]
 
@@ -653,8 +654,8 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
     X_train_typed = get_typed_feats(data_train,predPairFeatsTyped)
 
     if not args.useSims:
-        X_train = [x[0:len(X_train[0])//2] for x in X_train]#only the first half!
-        X_train_typed = [x[0:len(X_train_typed[0])//2] for x in X_train_typed]#only the first half!
+        X_train = [x[0:len(X_train[0])//2] for x in X_train]#only the first half! -> the second half are the "orders"? -- Teddy
+        X_train_typed = [x[0:len(X_train_typed[0])//2] for x in X_train_typed]#only the first half! -> the second half are the "orders"? -- Teddy
 
     if debug:
         print ("here shape: ", np.array(X_train).shape)
@@ -670,8 +671,27 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
 
     X_dev_typed = get_typed_feats(data_dev,predPairFeatsTyped)
 
+    dev_nodesInGraph = []
+
+    for (p,q,t1s,t2s,probs,a,l) in data_dev:
+        assert len(t1s) == len(t2s)
+        em_found = False
+        for t_i in range(len(t1s)):
+            if (p+"#"+q+"#"+str(a)+"#"+t1s[t_i]+"#"+t2s[t_i]) in predPairTypedExactFound:
+                em_found = True
+                break
+        if em_found:
+            dev_nodesInGraph.append(1)
+        else:
+            dev_nodesInGraph.append(0)
+    assert len(dev_nodesInGraph) == len(data_dev)
+    print(f"Total number of entries where both nodes are found in the graph: {sum(dev_nodesInGraph)};")
+    with open(os.path.join(root, out_dir, args.method+'_exact_found_labels.txt'), 'w', encoding='utf8') as exact_fount_ofp:
+        json.dump(dev_nodesInGraph, exact_fount_ofp, ensure_ascii=False, indent=4)
+
     if not args.useSims:
-        X_dev = [x[0:len(X_dev[0])//2] for x in X_dev]#only the first half!
+        X_dev = [x[0:len(X_dev[0])//2] for x in X_dev]#only the first half! The second half is based on those similarities.
+        # The remaining first half can again be split in two, the first half of the first half is the original score, the second of the first half is the reciprocal ranking score.
         X_dev_typed = [x[0:len(X_dev_typed[0])//2] for x in X_dev_typed]#only the first half!
 
     if not args.supervised:
@@ -703,7 +723,7 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
                 else:
                     Y_dev_pred = [x[f_idx] * x[f_idx + graph.Graph.num_feats // 2] ** .5 for x in X_dev_typed]
 
-                if args.backupAvg:
+                if args.backupAvg:  # if exact match is not found, backup with average.
                     if not args.rankDiscount:
                         Y_dev_pred_backup = [x[f_idx] for x in X_dev]
                     else:
@@ -722,8 +742,7 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
 
                     Y_dev_pred = Y_dev_pred2
 
-            if debug:
-                print ("nnz Y_dev_pred: ", np.count_nonzero(Y_dev_pred))
+            print("nnz Y_dev_pred: ", np.count_nonzero(Y_dev_pred))
 
         elif args.wAvgFeats:
 
@@ -764,7 +783,7 @@ def fit_predict(data_list, predPairFeats,predPairFeatsTyped,predPairConnectedLis
 
         return Y_dev_pred,Y_dev_TNF,Y_dev_TNF_typed, None, None
 
-
+    # below are all supervised -- Teddy
     if not args.calcSupScores:
         [X_dev[i].extend(X_dev_typed[i]) for i in range(len(X_dev))]
     else:
@@ -889,7 +908,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
 
     # f_out_predpair_seen = open('predpair_seen.txt', 'w')
 
-    if orig_fnames[1]:
+    if orig_fnames[1] and not args.dev_bt and not args.test_bt:
 
         if not args.berDS and not args.berDS_v2 and not args.berDS_v3:
             Y_dev_berant = berant.predict_Berant(root+"berant/",orig_fnames[1])
@@ -917,6 +936,11 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
             if Y_dev_ppdb_xxxl[i] != Y_dev[i]:
                 if debug:
                     print ("ppdb xxxl wrong: ", lines_dev[i])
+    else:
+        Y_dev_berant = None
+        Y_dev_berant2 = None
+        Y_dev_ppdb_xl = None
+        Y_dev_ppdb_xxxl = None
 
 
     #Now do the final prediction!
@@ -944,7 +968,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
             pred = False
         else:
             Y_dev_base_const.append(False)
-            if Y_dev_pred0:
+            if Y_dev_pred0:  # means: the entailment graph based prediction scores exist! -- Teddy
                 pred = Y_dev_pred0[idx]
             else:
                 pred = False
@@ -965,7 +989,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
                 Y_dev_pred_seen.append(pred)
                 Y_dev_seen.append(Y_dev[idx])
 
-        if not cl_used:
+        if not cl_used and not args.dev_bt and not args.test_bt:
             Y_dev_berant[idx] = pred
             Y_dev_berant2[idx] = pred
             Y_dev_ppdb_xl[idx] = pred
@@ -980,28 +1004,30 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
         print ("eval baseline constraint: ")
         eval(Y_dev_base_const,Y_dev)
 
-    print ("Berant final: ")
-    eval(Y_dev_berant,Y_dev)
 
-    print ("Berant2 final: ")
-    eval(Y_dev_berant2,Y_dev)
+    if not args.dev_bt and not args.test_bt:
+        print ("Berant final: ")
+        eval(Y_dev_berant,Y_dev)
 
-    print ("ppdb_xl final: ")
-    eval(Y_dev_ppdb_xl, Y_dev)
+        print ("Berant2 final: ")
+        eval(Y_dev_berant2,Y_dev)
 
-    print ("ppdb_xxxl final: ")
-    eval(Y_dev_ppdb_xxxl, Y_dev)
+        print ("ppdb_xl final: ")
+        eval(Y_dev_ppdb_xl, Y_dev)
 
-    print ("analyze Berant")
-    for i,y in enumerate(Y_dev):
-        if Y_dev_berant2[i]!=Y_dev[i]:
+        print ("ppdb_xxxl final: ")
+        eval(Y_dev_ppdb_xxxl, Y_dev)
+
+        print ("analyze Berant")
+        for i,y in enumerate(Y_dev):
+            if Y_dev_berant2[i]!=Y_dev[i]:
+                if debug:
+                    print ("Berant2's wrong: ", lines_dev[i])
+
+        for (i,y) in enumerate(Y_dev_pred):
             if debug:
-                print ("Berant2's wrong: ", lines_dev[i])
-
-    for (i,y) in enumerate(Y_dev_pred):
-        if debug:
-            print (lines_dev[i])
-            print (y, " ", Y_dev[i])
+                print (lines_dev[i])
+                print (y, " ", Y_dev[i])
 
     fpr, tpr, thresholds = metrics.roc_curve(Y_dev, Y_dev_pred)
     if args.write:
@@ -1039,7 +1065,8 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
     (precision, recall, thresholds) = precision_recall_curve(Y_dev, Y_dev_pred)
     try:
         main_auc = evaluation.util.get_auc(precision[:-1], recall[:-1])
-    except:
+    except Exception as e:
+        print(e)
         main_auc = 0
 
     if args.write:
@@ -1078,7 +1105,7 @@ def final_prediction(data_dev, data_dev_CCG, predPairFeats, predPairFeatsTyped, 
 
         if args.write:
             if i>0:
-                op_pr_rec.write(str(precision[i])+ " "+ str(recall[i])+"\n")
+                op_pr_rec.write(str(precision[i])+ " "+ str(recall[i])+' '+str(thresholds[i-1])+"\n")
                 if precision[i] > .5 and precision[i]!=1:
                     prs_high.append(precision[i])
                     recs_high.append(recall[i])
@@ -1242,7 +1269,7 @@ def calcGraphScores(gr, cl, scaler):
 
 #These (until parameters) are fixed and won't change (too much)!
 
-root = "../../gfiles/"
+root = "../gfiles/"
 sysargs = sys.argv[1:]
 args = opts(sysargs)
 
@@ -1254,7 +1281,7 @@ if args.tnf:
 if args.outDir:
     out_dir = args.outDir+"/"
 else:
-    out_dir = 'results/pr_rec/'
+    out_dir = 'results_en/pr_rec/'
 
 if args.sim_suffix:
     f_post_fix = args.sim_suffix
@@ -1283,6 +1310,21 @@ if args.dev:
             fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/dev_rels_oie.txt"]
             orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev.txt"]
 
+# elif args.dev_bt:
+#     fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/dev_backtranslated_rels.txt"]
+#     fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/dev_rels_oie.txt"]
+#     orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_backtranslated.tsv"]
+
+elif args.dev_str_pref:
+    fnames_CCG = [root + "ent/all_comb_rels_predstr_pref.txt", root + "ent/dev_rels_predstr_pref.txt"]
+    fnames_oie = None
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev.txt"]
+
+elif args.dev_str_nopref:
+    fnames_CCG = [root + "ent/all_comb_rels_predstr_nopref.txt", root + "ent/dev_rels_predstr_nopref.txt"]
+    fnames_oie = None
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev.txt"]
+
 elif args.dev_v2:
     fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/dev_rels_v2.txt"]
     fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/dev_rels_oie.txt"]
@@ -1306,12 +1348,12 @@ elif args.berDS_v3:
     orig_fnames = [root + "ent/all_comb.txt", root + "ent/ber_all.txt"]
 
 elif args.dev_sherliic_v2:
-    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/dev_sherliic_rels_v2.txt"]
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/dev_sherliic.txt"]
+    fnames_CCG = [None, root + "ent/dev_sherliic_rels_v2.txt"]
+    orig_fnames = [None, root + "ent/dev_sherliic.txt"]
 
 elif args.test_sherliic_v2:
-    fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/test_sherliic_rels_v2.txt"]
-    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_sherliic.txt"]
+    fnames_CCG = [None, root + "ent/test_sherliic_rels_v2.txt"]
+    orig_fnames = [None, root + "ent/test_sherliic.txt"]
 
 elif args.snli:
     # fnames_CCG = [root + "ent/msnli_rels2.txt", root + "ent/msnli_rels2.txt"]
@@ -1338,6 +1380,21 @@ elif args.test:
             fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_rels.txt"]
             fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/test_rels_oie.txt"]
             orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
+
+elif args.test_bt:
+    fnames_CCG = [root + "ent/all_comb_rels.txt", root + "ent/test_backtranslated_rels.txt"]
+    fnames_oie = [root + "ent/all_rels_oie.txt", root + "ent/test_rels_oie.txt"]
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test_backtranslated.tsv"]
+
+elif args.test_str_pref:
+    fnames_CCG = [root + "ent/all_comb_rels_predstr_pref.txt", root + "ent/test_rels_predstr_pref.txt"]
+    fnames_oie = None
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
+
+elif args.test_str_nopref:
+    fnames_CCG = [root + "ent/all_comb_rels_predstr_nopref.txt", root + "ent/test_rels_predstr_nopref.txt"]
+    fnames_oie = None
+    orig_fnames = [root + "ent/all_comb.txt", root + "ent/test.txt"]
 
 elif args.test_v2:
     fnames_CCG = [root + "ent/all_comb_rels_v2.txt", root + "ent/test_rels_v2.txt"]
@@ -1394,7 +1451,7 @@ else:
 CCG = args.CCG
 typed = args.typed
 supervised = args.supervised
-oneFeat = args.oneFeat#as opposed to average features!
+oneFeat = args.oneFeat  # as opposed to average features!
 gpath = args.gpath
 method = args.method
 useSims = args.useSims
@@ -1419,7 +1476,7 @@ if debug:
     print ("args: ", CCG)
 
 if gpath:
-    engG_dir_addr = "../../gfiles/" + gpath +"/"
+    engG_dir_addr = "../gfiles/" + gpath +"/"
     if debug:
         print ("dir_addr: ", engG_dir_addr)
 else:
@@ -1447,28 +1504,30 @@ else:
 
 rels2Sims = evaluation.util.read_rels_sim(sim_path, CCG, useSims)
 
+print (rels2Sims)
+
 #end parameters
 
 
 #Form the samples (dev will contain the test if you use --test instead of --dev
-[_, Y_dev_base] = [baseline.predict_lemma_baseline(fname, args) for fname in orig_fnames]
+[_, Y_dev_base] = [baseline.predict_lemma_baseline(fname, args) for fname in orig_fnames]  # orig_fnames means
 
 #Do the training and prediction!
 
 if orig_fnames[0]:
     lines_dev = open(orig_fnames[1]).read().splitlines()
 else:
-    lines_dev = None
+    lines_dev = None  # means is SNLI
 
 
 if not args.instance_level:
     data_list, predPairSumCoefs, predPairFeats, predPairFeatsTyped, predPairConnectedList, \
     predPairConnectedWeightList, predPairTypedConnectedList, predPairTypedConnectedWeightList, predPairTypedExactFound = form_samples(fnames,
-                                                                                                           fnames_unary,
+                                                                                                           fnames_unary,  # should be none
                                                                                                            orig_fnames,
                                                                                                            engG_dir_addr,
-                                                                                                           fname_feats,
-                                                                                                           rels2Sims,
+                                                                                                           fname_feats,  # should be none
+                                                                                                           rels2Sims,  # should be none
                                                                                                            args)
     if not args.snli:
         Y_dev_pred0, Y_dev_TNF0, Y_dev_TNF_typed0, cl, scaler = fit_predict(data_list, predPairFeats,
@@ -1528,14 +1587,14 @@ elif not args.snli:
 
     data_dev = data_list[1]
     data_dev_CCG = evaluation.util.read_data(fnames_CCG[1], orig_fnames[1], args.CCG, args.typed, args.LDA)
-    Y_dev = [l for (_,_,_,_,_,_,l) in data_dev]
+    Y_dev = [l for (_,_,_,_,_,_,l) in data_dev]  # gold labels
 
     print ("baseline eval:")
     eval(Y_dev_base,Y_dev)
 
     if debug:
         print (Y_dev_pred0)
-
+    # here the data_dev and data_dev_CCG should be the same! -- Teddy
     _, Y_berant = final_prediction(data_dev,data_dev_CCG, predPairFeats ,predPairFeatsTyped, predPairSumCoefs, Y_dev_base, Y_dev_pred0,Y_dev_TNF0,Y_dev_TNF_typed0, lines_dev, root, args)
 
     if debug:
@@ -1566,7 +1625,7 @@ elif not args.snli:
                 print ("typed ", i)
 
             Y_dev_pred_binary = Y_dev_TNF_typed0[i]
-            if debug:
+            if debug and not args.dev_bt and not args.test_bt:
                 write_detailed_res_binary(data_dev,lines_dev,Y_dev,Y_dev_pred_binary,Y_dev_pred_binary, Y_berant)
 
             pr, rec, _ = eval(Y_dev_TNF_typed0[i],Y_dev)

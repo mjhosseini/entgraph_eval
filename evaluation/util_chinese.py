@@ -1,11 +1,12 @@
 # coding=utf-8
-from lemma_baseline import qa_utils
+from lemma_baseline import qa_utils_chinese
 import numpy as np
 from sklearn.metrics import precision_recall_curve
 from sklearn import metrics
 from graph import graph
 
 debug = False
+
 
 def getUnaryFrom_binary(pred):
     modifier = ""
@@ -34,35 +35,10 @@ def getUnaryFrom_binary(pred):
 
     return unary1,unary2
 
-def read_data_plain(orig_dpath):
-    lines_orig = open(orig_dpath, encoding='utf8').read().splitlines()
 
-    ret = []
-    lines_no_label = []
-    labels = []
-
-    for idx in range(len(lines_orig)):
-        line_orig = lines_orig[idx]
-        ss_orig = line_orig.split("\t")
-        lines_no_label.append(ss_orig[0] + '\t' + ss_orig[1])
-        q_orig = ss_orig[0].split(",")[1].strip()
-        p_orig = ss_orig[1].split(",")[1].strip()
-
-        ret.append(p_orig+"#"+q_orig)
-
-        if ss_orig[2].startswith("n") or ss_orig[2]=="False":
-            l = 0
-        else:
-            l = 1
-        labels.append(l)
-
-    return lines_no_label,ret,labels
-
-
-def read_data(dpath, orig_dpath,CCG,typed,LDA):
+def read_data(dpath, orig_dpath, CCG,typed,LDA):
     if dpath is None:  # added by Teddy
         return []
-
     f = open(dpath, encoding='utf8')
 
     if orig_dpath:
@@ -71,24 +47,18 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
         lines_orig = None
 
     data = []
-    idx = 0
-    for l in f:
+    for lidx, l in enumerate(f):
         line = l.replace("\n","")
-
-        # if idx==10000:
-        #     break
-
         if lines_orig:
-            line_orig = lines_orig[idx]
+            line_orig = lines_orig[lidx]
         else:
             line_orig = None
 
+        # line: (用于.1,用于.2) 药物::medicine 感染::disease	(治愈.1,治愈.2) 药物::medicine 感染::disease	False
         ss = line.split("\t")
-
         if len(ss)<3:
             if debug:
                 print ("bad len problem: ", line)
-            idx += 1
             continue
 
         q_all = ss[0].split(" ")
@@ -107,22 +77,7 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
             t2s = [t2]
             probs = [1]
         elif typed and LDA:
-            tss = ss[3].split()
-            i=0
-            t1s = []
-            t2s = []
-            probs = []
-            while i<len(tss):
-                ts = tss[i].split("#")
-                t1 = ts[0]
-                t2 = ts[1]
-
-                i+=1
-                prob = float(tss[i])
-                t1s.append(t1)
-                t2s.append(t2)
-                probs.append(prob)
-                i+=1
+            raise AssertionError
         else:
             #Not well formed
             t1 = "thing"
@@ -132,63 +87,56 @@ def read_data(dpath, orig_dpath,CCG,typed,LDA):
             probs = [1]
 
         #First, let's see if the args are aligned
-
         if CCG:
             a = True
-            if line_orig:#lazy way to check snli
-                if len(q_all)>1 and len(p_all)>1:
-                    a = qa_utils.aligned_args_rel(q_all,p_all)
-
+            if line_orig:  # lazy way to check snli
+                if len(q_all) > 1 and len(p_all) > 1:
+                    a = qa_utils_chinese.aligned_args_rel(q_all, p_all)
         else:
             if line_orig:
                 ss_orig = line_orig.split("\t")
                 q_orig = ss_orig[0].split(",")
                 p_orig = ss_orig[1].split(",")
-
-                a = qa_utils.aligned_args([q_orig[0].strip(),"_",q_orig[2].strip()],[p_orig[0].strip(),"",p_orig[2].strip()])
+                a = qa_utils_chinese.aligned_args([q_orig[0].strip(),"_",q_orig[2].strip()],[p_orig[0].strip(),"",p_orig[2].strip()])
                 if a==-1:
-                    a = qa_utils.aligned_args([p_orig[0].strip(),"",p_orig[2].strip()],[q_orig[0].strip(),"_",q_orig[2].strip()])
+                    a = qa_utils_chinese.aligned_args([p_orig[0].strip(),"",p_orig[2].strip()],[q_orig[0].strip(),"_",q_orig[2].strip()])
                     if a==-1:
                         raise Exception('HORRIBLE BUG!!!'+str(q)+" "+str(a))
             else:
-                a = True
+                a = True  # means "aligned"
+            raise AssertionError
 
         try:
-            q_arg1 = qa_utils.LEMMATIZER.lemmatize(q_all[1].split("::")[0])
-            q_arg2 = qa_utils.LEMMATIZER.lemmatize(q_all[2].split("::")[0])
+            # again, no need to lemmatize
+            q_arg1 = q_all[1].split("::")[0]
+            q_arg2 = q_all[2].split("::")[0]
 
-            p_arg1 = qa_utils.LEMMATIZER.lemmatize(p_all[1].split("::")[0])
-            p_arg2 = qa_utils.LEMMATIZER.lemmatize(p_all[2].split("::")[0])
+            p_arg1 = p_all[1].split("::")[0]
+            p_arg2 = p_all[2].split("::")[0]
 
             if line_orig:
                 if a:
-                    if q_arg1 != p_arg1 or q_arg2!=p_arg2:
+                    if q_arg1 != p_arg1 or q_arg2 != p_arg2:
                         if debug:
-                            print ("not same args: ", line_orig)
-                            print (line)
+                            print("not same args: ", line_orig)
+                            print(line)
                 else:
-                    if q_arg1 != p_arg2 or q_arg2!=p_arg1:
+                    if q_arg1 != p_arg2 or q_arg2 != p_arg1:
                         if debug:
-                            print ("not same args: ", line_orig)
-                            print (line)
-        except:
+                            print("not same args: ", line_orig)
+                            print(line)
+        except Exception as e:
             if debug:
-                print ("problem: ", line)
-
-
-
-
-        #(exports.1,exports.2) nigeria oil	(supplier.of.1,supplier.of.2) nigeria oil
+                print("problem: ", line)
+                print(e)
+            raise
 
         if ss[2].startswith("n") or ss[2]=="False":
             l = 0
-        elif ss[2] == 'True':
-            l = 1
         else:
-            raise AssertionError
+            l = 1
 
         data.append((p,q,t1s,t2s,probs,a,l))  # t1s: [type_1]; t2s: [type_2]; probs: [1], a: aligned, l: True/False
-        idx += 1
 
     return data
 
@@ -263,12 +211,18 @@ def get_auc(precisions, recalls):
     xs = []
     ys = []
     assert len(precisions) == len(recalls)
-    for i, p in enumerate(precisions):
-        if p >= .5:
-            xs.append(recalls[i])
+    for i, (p, r) in enumerate(zip(precisions, recalls)):
+        if p >= .5:  # AUC above precision of 0.5
+            xs.append(r)
             ys.append(p)
-
-    auc = metrics.auc(xs, ys)
+    try:
+        auc = metrics.auc(xs, ys)
+    except ValueError as e:
+        print(e)
+        print(f"xs: {xs}")
+        print(f"ys: {ys}")
+        auc = 0.0
+    # auc = metrics.auc(xs, ys, reorder=True)  # this reorder = True is probably deprecated?
     return auc
 
 def get_confidence_interval(Y,Y_pred):
@@ -453,7 +407,7 @@ def read_rels_sim(fpath, isCCG, useSims):
             #     break
             q = ss[idx]
             idx += 1
-            sim = np.float(ss[idx])
+            sim = float(ss[idx])
             idx+=1
             # if sim<.90:
             #     continue
@@ -465,7 +419,7 @@ def read_rels_sim(fpath, isCCG, useSims):
                 if modifier!="":
                     q = modifier+"__"+q
                 try:
-                    if not qa_utils.same_CCG_args(p,q):# or not qa_utils.same_main_words(p,q,prepositions)
+                    if not qa_utils_chinese.same_CCG_args(p,q):# or not qa_utils_chinese.same_main_words(p,q,prepositions)
                         continue
                 except:
                     if debug:
@@ -508,7 +462,7 @@ def down_sample_negs(X,Y):
             X2.append(X[i])
             Y2.append(Y[i])
 
-    pair_recall = np.float(np.count_nonzero(Y2))/np.count_nonzero(Y)
+    pair_recall = float(np.count_nonzero(Y2))/np.count_nonzero(Y)
     if debug:
         print ("pair recall: ", pair_recall)
     X = X2
@@ -554,14 +508,16 @@ def read_cos_feats(fname_cos_feats):
     lines = open(fname_cos_feats, encoding='utf8').read().splitlines()
     for l in lines:
         ss = l.split()
-        ss = [np.float(s) for s in ss]
+        ss = [float(s) for s in ss]
         ret.append(ss)
     return ret
+
 
 def addPred(p, predCounts):
     if p not in predCounts:
         predCounts[p] = 0
     predCounts[p] = predCounts[p] + 1
+
 
 def getPredPairs(data):
     preds = {}
@@ -582,5 +538,5 @@ def getPredPairs(data):
 def read_instance_level_probs(fname):
     ret = []
     for line in open(fname, encoding='utf8'):
-        ret.append(np.float(line[:-1]))
+        ret.append(float(line[:-1]))
     return ret
